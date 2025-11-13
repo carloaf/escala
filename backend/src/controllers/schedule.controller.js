@@ -82,18 +82,47 @@ async function listSchedules(req, res) {
 
 async function getMySchedules(req, res) {
   try {
-    const { name, military_id } = req.user;
+    const { name, rank, military_id } = req.user;
     
-    let schedules;
-    if (military_id) {
-      schedules = await Schedule.findByMilitaryId(military_id);
+    let mySchedules;
+    // Priority: rank+name > military_id > name
+    // Changed priority because military_id may not be populated in schedules table
+    if (rank && name) {
+      mySchedules = await Schedule.findByRankAndName(rank, name);
+    } else if (military_id) {
+      mySchedules = await Schedule.findByMilitaryId(military_id);
     } else if (name) {
-      schedules = await Schedule.findByName(name);
+      mySchedules = await Schedule.findByName(name);
     } else {
       return res.status(400).json({ error: 'User has no identifiable information' });
     }
     
-    return res.json(schedules);
+    // For each schedule, find ALL people in the same service+date (to show substitutions)
+    const enrichedSchedules = [];
+    const allSchedules = await Schedule.all();
+    
+    for (const mySchedule of mySchedules) {
+      // Find all schedules with same service and date
+      const related = allSchedules.filter(s => 
+        s.service === mySchedule.service && s.date === mySchedule.date
+      ).sort((a, b) => a.id - b.id); // Sort by ID to maintain order
+      
+      // Add all related schedules (for substitution display)
+      related.forEach(r => {
+        // Mark which one is the current user
+        const isCurrentUser = (rank && r.rank === rank && r.name === name) || 
+                              (military_id && r.military_id === military_id) ||
+                              (r.name === name);
+        enrichedSchedules.push({ ...r, isCurrentUser });
+      });
+    }
+    
+    // Remove duplicates (same service+date might be added multiple times)
+    const unique = enrichedSchedules.filter((item, index, self) =>
+      index === self.findIndex(t => t.id === item.id)
+    );
+    
+    return res.json(unique);
   } catch (err) {
     console.error('getMySchedules error', err);
     return res.status(500).json({ error: 'Failed to fetch your schedules' });

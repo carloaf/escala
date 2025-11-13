@@ -4,10 +4,28 @@ const { JWT_SECRET } = require('../middleware/auth.middleware');
 
 async function register(req, res) {
   try {
-    const { email, password, name, military_id, rank, role } = req.body;
+    const { 
+      email, password, war_name, full_name, military_id, 
+      rank, organization, company, phone, role,
+      name // compatibilidade com código antigo
+    } = req.body;
     
-    if (!email || !password || !name) {
-      return res.status(400).json({ error: 'Email, password and name are required' });
+    const warName = war_name || name;
+    
+    if (!email || !password || !warName) {
+      return res.status(400).json({ error: 'Email, password and war_name are required' });
+    }
+
+    if (!military_id || military_id.length !== 10 || !/^\d{10}$/.test(military_id)) {
+      return res.status(400).json({ error: 'Military ID must be exactly 10 digits' });
+    }
+
+    if (!organization) {
+      return res.status(400).json({ error: 'Organization (OM) is required' });
+    }
+
+    if (!company) {
+      return res.status(400).json({ error: 'Company (Cia) is required' });
     }
     
     // Check if user already exists
@@ -16,22 +34,29 @@ async function register(req, res) {
       return res.status(400).json({ error: 'User already exists' });
     }
     
-    const user = await User.create({ email, password, name, military_id, rank, role });
+    const user = await User.create({ 
+      email, password, war_name: warName, full_name, 
+      military_id, rank, organization, company, phone, role 
+    });
     
     return res.status(201).json({ 
       message: 'User created successfully', 
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        war_name: user.war_name,
+        full_name: user.full_name,
         military_id: user.military_id,
         rank: user.rank,
+        organization: user.organization,
+        company: user.company,
+        phone: user.phone,
         role: user.role
       }
     });
   } catch (err) {
     console.error('Register error', err);
-    return res.status(500).json({ error: 'Failed to register user' });
+    return res.status(500).json({ error: 'Failed to register user', details: err.message });
   }
 }
 
@@ -58,7 +83,9 @@ async function login(req, res) {
         id: user.id, 
         email: user.email, 
         role: user.role,
-        name: user.name,
+        name: user.war_name, // para compatibilidade
+        war_name: user.war_name,
+        rank: user.rank,
         military_id: user.military_id
       },
       JWT_SECRET,
@@ -70,9 +97,13 @@ async function login(req, res) {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        war_name: user.war_name,
+        full_name: user.full_name,
         military_id: user.military_id,
         rank: user.rank,
+        organization: user.organization,
+        company: user.company,
+        phone: user.phone,
         role: user.role
       }
     });

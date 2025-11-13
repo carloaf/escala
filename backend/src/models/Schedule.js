@@ -32,6 +32,17 @@ async function findByName(name) {
   return result.rows;
 }
 
+async function findByRankAndName(rank, name) {
+  const query = `
+    SELECT * FROM schedules 
+    WHERE LOWER(rank) = LOWER($1) AND name ILIKE $2 
+    ORDER BY date ASC
+  `;
+  // Use LOWER() for exact rank match (case-insensitive) and ILIKE for name (partial match)
+  const result = await pool.query(query, [rank, `%${name}%`]);
+  return result.rows;
+}
+
 async function findByMilitaryId(militaryId) {
   const query = `SELECT * FROM schedules WHERE military_id = $1 ORDER BY date ASC`;
   const result = await pool.query(query, [militaryId]);
@@ -54,4 +65,4 @@ async function exists({ service, date, rank, name }) {
   return result.rowCount > 0;
 }
 
-module.exports = { insert, all, findByName, findByMilitaryId, deleteAll, exists };
+module.exports = { insert, all, findByName, findByRankAndName, findByMilitaryId, deleteAll, exists };

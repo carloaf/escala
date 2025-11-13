@@ -1,0 +1,53 @@
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: escala-db
+    environment:
+      POSTGRES_USER: escala_user
+      POSTGRES_PASSWORD: escala_pass
+      POSTGRES_DB: escala_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - escala-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U escala_user -d escala_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: escala-backend
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: escala_user
+      DB_PASSWORD: escala_pass
+      DB_NAME: escala_db
+      JWT_SECRET: your-secret-key-change-in-production
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/uploads:/app/uploads
+      - ./backend/public:/app/public
+    networks:
+      - escala-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: npm run dev
+
+volumes:
+  postgres_data:
+
+networks:
+  escala-network:
+    driver: bridge

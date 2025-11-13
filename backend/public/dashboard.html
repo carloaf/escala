@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Escala Militar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .user-details h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 3px;
+        }
+
+        .user-details p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 8px;
+        }
+
+        .badge.admin {
+            background: #f59e0b;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-logout {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-logout:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .upload-area:hover {
+            border-color: #5568d3;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #5568d3;
+            background: #e5e7ff;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .schedules-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .schedules-table th {
+            background: #f3f4f6;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .schedules-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            color: #4b5563;
+        }
+
+        .schedules-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #9ca3af;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 8px;
+            color: white;
+        }
+
+        .stat-card h4 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">A</div>
+                <div class="user-details">
+                    <h2 id="userName">Carregando...</h2>
+                    <p id="userEmail"></p>
+                </div>
+            </div>
+            <button class="btn btn-logout" onclick="logout()">Sair</button>
+        </div>
+
+        <div class="main-content">
+            <!-- Admin Upload Section -->
+            <div class="card" id="uploadSection" style="display: none;">
+                <h3>
+                    <span>📤</span>
+                    Upload de Escala (PDF)
+                </h3>
+                <div class="message" id="uploadMessage"></div>
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <input type="file" id="fileInput" accept=".pdf" onchange="handleFileSelect(event)">
+                    <p style="font-size: 18px; margin-bottom: 10px;">📄</p>
+                    <p style="color: #667eea; font-weight: 600;">Clique para selecionar ou arraste o arquivo PDF</p>
+                    <p style="color: #9ca3af; font-size: 13px; margin-top: 8px;">Formato: PREVISÃO DA ESCALA DE SERVIÇO</p>
+                </div>
+                <div class="file-info" id="fileInfo"></div>
+                <button class="btn btn-primary" id="uploadBtn" onclick="uploadPdf()" style="display: none;">
+                    Processar e Extrair Dados
+                </button>
+            </div>
+
+            <!-- Statistics -->
+            <div class="card">
+                <h3>
+                    <span>📊</span>
+                    Estatísticas
+                </h3>
+                <div class="stats" id="statsContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando estatísticas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedules List -->
+            <div class="card">
+                <h3>
+                    <span>📅</span>
+                    <span id="schedulesTitle">Minhas Escalas</span>
+                </h3>
+                <div id="schedulesContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando escalas...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api';
+        let token = localStorage.getItem('token');
+        let currentUser = null;
+        let selectedFile = null;
+
+        // Check authentication
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        // Initialize
+        async function init() {
+            try {
+                await loadUserInfo();
+                await loadSchedules();
+                await loadStats();
+            } catch (error) {
+                console.error('Initialization error:', error);
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login.html';
+                }
+            }
+        }
+
+        // Load user info
+        async function loadUserInfo() {
+            try {
+                const response = await fetch(`${API_URL}/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                currentUser = await response.json();
+                
+                // Update UI
+                document.getElementById('userName').textContent = currentUser.name || currentUser.email;
+                document.getElementById('userEmail').textContent = currentUser.email;
+                document.getElementById('userName').innerHTML += `<span class="badge ${currentUser.role === 'admin' ? 'admin' : ''}">${currentUser.role}</span>`;
+                
+                // Get first letter for avatar
+                const firstLetter = (currentUser.name || currentUser.email).charAt(0).toUpperCase();
+                document.getElementById('userAvatar').textContent = firstLetter;
+
+                // Show upload section for admins
+                if (currentUser.role === 'admin') {
+                    document.getElementById('uploadSection').style.display = 'block';
+                    document.getElementById('schedulesTitle').textContent = 'Todas as Escalas';
+                }
+            } catch (error) {
+                console.error('Error loading user:', error);
+                throw error;
+            }
+        }
+
+        // Load schedules
+        async function loadSchedules() {
+            const container = document.getElementById('schedulesContainer');
+            
+            try {
+                const endpoint = currentUser.role === 'admin' ? '/schedules' : '/schedules/my';
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const schedules = await response.json();
+
+                if (schedules.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <p style="font-size: 48px; margin-bottom: 15px;">📋</p>
+                            <p style="font-size: 16px; margin-bottom: 8px;">Nenhuma escala encontrada</p>
+                            <p style="font-size: 14px;">
+                                ${currentUser.role === 'admin' ? 'Faça upload de um PDF para começar' : 'Você não possui escalas agendadas'}
+                            </p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Group schedules by date and service to identify substitutions
+                const groupedByDateService = {};
+                schedules.forEach(schedule => {
+                    const key = `${schedule.date}_${schedule.service}`;
+                    if (!groupedByDateService[key]) {
+                        groupedByDateService[key] = [];
+                    }
+                    groupedByDateService[key].push(schedule);
+                });
+
+                // Group schedules by date for display
+                const groupedByDate = {};
+                schedules.forEach(schedule => {
+                    if (!groupedByDate[schedule.date]) {
+                        groupedByDate[schedule.date] = [];
+                    }
+                    groupedByDate[schedule.date].push(schedule);
+                });
+
+                // Sort dates
+                const sortedDates = Object.keys(groupedByDate).sort();
+
+                // Build table
+                let html = `
+                    <table class="schedules-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Serviço</th>
+                                <th>P/G Nome</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                sortedDates.forEach(date => {
+                    const dateSchedules = groupedByDate[date];
+                    
+                    // Format date properly from ISO format
+                    let dateStr = '-';
+                    if (date) {
+                        try {
+                            const dateObj = new Date(date + 'T00:00:00');
+                            dateStr = dateObj.toLocaleDateString('pt-BR');
+                        } catch (e) {
+                            dateStr = date;
+                        }
+                    }
+                    
+                    dateSchedules.forEach((schedule, index) => {
+                        // Format rank + name (P/G Nome)
+                        let fullName = schedule.name || '-';
+                        if (schedule.rank) {
+                            fullName = `${schedule.rank} ${schedule.name}`;
+                        }
+                        
+                        // Check if this is a substitution (first person in a group of 2+)
+                        const key = `${schedule.date}_${schedule.service}`;
+                        const group = groupedByDateService[key];
+                        const isSubstituted = group.length > 1 && group[0].id === schedule.id;
+                        
+                        // Apply strikethrough style if substituted (to both service and name)
+                        const strikeStyle = isSubstituted ? 'text-decoration: line-through; color: #9ca3af;' : '';
+                        
+                        // Show date only on first row for each date
+                        const showDate = index === 0;
+                        const rowspan = dateSchedules.length;
+                        
+                        html += `
+                            <tr>
+                                ${showDate ? `<td rowspan="${rowspan}" style="vertical-align: top; font-weight: 600;">${dateStr}</td>` : ''}
+                                <td style="${strikeStyle}">${schedule.service}</td>
+                                <td style="${strikeStyle}">${fullName}</td>
+                            </tr>
+                        `;
+                    });
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading schedules:', error);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p style="color: #ef4444;">Erro ao carregar escalas</p>
+                        <p style="font-size: 14px;">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            const container = document.getElementById('statsContainer');
+            
+            try {
+                const endpoint = currentUser.role === 'admin' ? '/schedules' : '/schedules/my';
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const schedules = await response.json();
+
+                // Calculate stats
+                const total = schedules.length;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const upcoming = schedules.filter(s => new Date(s.date) >= today).length;
+                const uniqueServices = new Set(schedules.map(s => s.service)).size;
+
+                container.innerHTML = `
+                    <div class="stat-card">
+                        <h4>Total de Escalas</h4>
+                        <div class="number">${total}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Próximas Escalas</h4>
+                        <div class="number">${upcoming}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Tipos de Serviço</h4>
+                        <div class="number">${uniqueServices}</div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                container.innerHTML = '<p style="color: #ef4444;">Erro ao carregar estatísticas</p>';
+            }
+        }
+
+        // Drag and drop handlers
+        const uploadArea = document.getElementById('uploadArea');
+        if (uploadArea) {
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+        }
+
+        // Handle file selection
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (file.type !== 'application/pdf') {
+                showMessage('error', 'Por favor, selecione um arquivo PDF');
+                return;
+            }
+
+            selectedFile = file;
+            document.getElementById('fileInfo').textContent = `Arquivo selecionado: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+            document.getElementById('uploadBtn').style.display = 'inline-block';
+        }
+
+        // Upload PDF
+        async function uploadPdf() {
+            if (!selectedFile) {
+                showMessage('error', 'Nenhum arquivo selecionado');
+                return;
+            }
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Processando...';
+
+            try {
+                const formData = new FormData();
+                formData.append('pdf', selectedFile);
+
+                const response = await fetch(`${API_URL}/schedules/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || result.error || 'Erro ao fazer upload');
+                }
+
+                showMessage('success', result.message || `✅ Upload concluído! ${result.count || 0} registros extraídos.`);
+                
+                // Reset form
+                selectedFile = null;
+                document.getElementById('fileInput').value = '';
+                document.getElementById('fileInfo').textContent = '';
+                document.getElementById('uploadBtn').style.display = 'none';
+
+                // Reload data
+                await loadSchedules();
+                await loadStats();
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                showMessage('error', `❌ Erro: ${error.message}`);
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Processar e Extrair Dados';
+            }
+        }
+
+        // Show message
+        function showMessage(type, text) {
+            const msg = document.getElementById('uploadMessage');
+            msg.className = `message ${type} show`;
+            msg.textContent = text;
+            
+            setTimeout(() => {
+                msg.classList.remove('show');
+            }, 5000);
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

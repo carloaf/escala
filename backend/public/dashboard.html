@@ -489,16 +489,39 @@
                     }
                     
                     dateSchedules.forEach((schedule, index) => {
-                        // Format rank + name (P/G Nome)
+                        // Format rank + name (P/G Nome) - rank in uppercase
                         let fullName = schedule.name || '-';
                         if (schedule.rank) {
-                            fullName = `${schedule.rank} ${schedule.name}`;
+                            fullName = `${schedule.rank.toUpperCase()} ${schedule.name}`;
+                        }
+                        
+                        // Format service name
+                        let serviceName = schedule.service || '-';
+                        // Simplify service names
+                        serviceName = serviceName
+                            .replace('Guardas ao Quartel 1ª Cia Sup', 'Guarda 1ª Cia')
+                            .replace('Guardas ao Quartel 2ª Cia Sup', 'Guarda 2ª Cia')
+                            .replace('Guarda aos Paióis 2ª Cia Sup', 'Guarda Paióis')
+                            .replace('Plantões 1ª Cia Sup', 'Plantões 1ª Cia')
+                            .replace('Plantões 2ª Cia Sup', 'Plantões 2ª Cia');
+                        
+                        // Remove prepositions: de, da, do, dos, das, ao, aos
+                        serviceName = serviceName.replace(/\b(de|da|do|dos|das|ao|aos)\b/gi, '').replace(/\s+/g, ' ').trim();
+                        
+                        // Capitalize first letter of each word for "Previsão" style services
+                        if (!serviceName.includes('Cia')) {
+                            serviceName = serviceName.split(' ').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                            ).join(' ');
                         }
                         
                         // Check if this is a substitution (first person in a group of 2+)
                         const key = `${schedule.date}_${schedule.service}`;
                         const group = groupedByDateService[key];
-                        const isSubstituted = group.length > 1 && group[0].id === schedule.id;
+                        
+                        // Don't apply strikethrough for Boletim Interno (detected by "Cia Sup" in service name)
+                        const isBoletimInterno = schedule.service && (schedule.service.includes('1ª Cia Sup') || schedule.service.includes('2ª Cia Sup'));
+                        const isSubstituted = !isBoletimInterno && group.length > 1 && group[0].id === schedule.id;
                         
                         // Apply strikethrough style if substituted (to both service and name)
                         const strikeStyle = isSubstituted ? 'text-decoration: line-through; color: #9ca3af;' : '';
@@ -510,7 +533,7 @@
                         html += `
                             <tr>
                                 ${showDate ? `<td rowspan="${rowspan}" style="vertical-align: top; font-weight: 600;">${dateStr}</td>` : ''}
-                                <td style="${strikeStyle}">${schedule.service}</td>
+                                <td style="${strikeStyle}">${serviceName}</td>
                                 <td style="${strikeStyle}">${fullName}</td>
                             </tr>
                         `;

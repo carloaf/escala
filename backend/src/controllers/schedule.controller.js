@@ -7,7 +7,7 @@ async function uploadPdf(req, res) {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     const filePath = req.file.path;
-    const rows = await extractFromPdf(filePath);
+    const { results: rows, pdfType } = await extractFromPdf(filePath);
 
     if (!rows || rows.length === 0) {
       return res.status(400).json({ error: 'No data extracted from PDF' });
@@ -15,6 +15,17 @@ async function uploadPdf(req, res) {
 
     // Get existing schedules to detect changes
     const existingSchedules = await Schedule.all();
+    
+    // If Boletim Interno: delete all schedules for the same date(s)
+    // Boletim is the DEFINITIVE schedule, replacing any "Previsão" data
+    if (pdfType === 'boletim_interno') {
+      const dates = [...new Set(rows.map(r => r.date))];
+      console.log(`\nBoletim Interno detectado! Deletando escalas existentes para: ${dates.join(', ')}\n`);
+      
+      for (const date of dates) {
+        await Schedule.deleteByDate(date);
+      }
+    }
 
     // Insert new schedules, but preserve previous records (do not delete)
     // ON CONFLICT in Schedule.insert handles duplicates automatically

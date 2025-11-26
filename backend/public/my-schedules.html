@@ -577,47 +577,101 @@
                 return (a.service || '').localeCompare(b.service || '');
             });
 
-            // Group by date+service to detect substitutions
-            const serviceMap = {};
-            sortedSchedules.forEach(s => {
-                const key = `${s.service}|${s.date}`;
-                if (!serviceMap[key]) serviceMap[key] = [];
-                serviceMap[key].push(s);
-            });
+            // For Boletim Interno: filter only current user's schedules (no grouping)
+            // For Previsão: group by date+service to detect substitutions
+            const isBoletimInterno = sortedSchedules.some(s => s.service && (s.service.includes('1ª Cia Sup') || s.service.includes('2ª Cia Sup')));
+            
+            let displaySchedules = [];
+            
+            if (isBoletimInterno) {
+                // Boletim Interno: show only schedules where isCurrentUser = true
+                displaySchedules = sortedSchedules.filter(s => s.isCurrentUser);
+            } else {
+                // Previsão da Escala: group by date+service to show substitutions
+                const serviceMap = {};
+                sortedSchedules.forEach(s => {
+                    const key = `${s.service}|${s.date}`;
+                    if (!serviceMap[key]) serviceMap[key] = [];
+                    serviceMap[key].push(s);
+                });
+                
+                const uniqueKeys = [];
+                const keyMap = {};
+                sortedSchedules.forEach(s => {
+                    const key = `${s.service}|${s.date}`;
+                    if (!keyMap[key]) {
+                        uniqueKeys.push(key);
+                        keyMap[key] = true;
+                    }
+                });
+                
+                displaySchedules = uniqueKeys.map(key => {
+                    const group = serviceMap[key];
+                    return {
+                        current: group[group.length - 1],
+                        substituted: group.slice(0, -1)
+                    };
+                });
+            }
 
-            // Build cards: one card per unique date+service, showing all people (substituted + current)
-            const uniqueKeys = [];
-            const keyMap = {};
-            sortedSchedules.forEach(s => {
-                const key = `${s.service}|${s.date}`;
-                if (!keyMap[key]) {
-                    uniqueKeys.push(key);
-                    keyMap[key] = true;
+            container.innerHTML = displaySchedules.map(item => {
+                let current, substituted, hasSubstitution;
+                
+                if (isBoletimInterno) {
+                    // Simple schedule item (no substitutions)
+                    current = item;
+                    substituted = [];
+                    hasSubstitution = false;
+                } else {
+                    // Grouped schedule with potential substitutions
+                    current = item.current;
+                    substituted = item.substituted || [];
+                    hasSubstitution = substituted.length > 0;
                 }
-            });
-
-            container.innerHTML = uniqueKeys.map(key => {
-                const group = serviceMap[key];
-                const current = group[group.length - 1]; // Last is current assignment
-                const substituted = group.slice(0, -1); // All before last are substitutions
 
                 const initial = (current.name || 'U')[0].toUpperCase();
-                const hasSubstitution = substituted.length > 0;
+                
+                // Format service name
+                let serviceName = current.service || 'Serviço não especificado';
+                serviceName = serviceName
+                    .replace('Guardas ao Quartel 1ª Cia Sup', 'Guarda 1ª Cia')
+                    .replace('Guardas ao Quartel 2ª Cia Sup', 'Guarda 2ª Cia')
+                    .replace('Guarda aos Paióis 2ª Cia Sup', 'Guarda Paióis')
+                    .replace('Plantões 1ª Cia Sup', 'Plantões 1ª Cia')
+                    .replace('Plantões 2ª Cia Sup', 'Plantões 2ª Cia');
+                
+                // Remove prepositions: de, da, do, dos, das, ao, aos
+                serviceName = serviceName.replace(/\b(de|da|do|dos|das|ao|aos)\b/gi, '').replace(/\s+/g, ' ').trim();
+                
+                // Capitalize first letter of each word for "Previsão" style services
+                if (!serviceName.includes('Cia')) {
+                    serviceName = serviceName.split(' ').map(word => 
+                        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                    ).join(' ');
+                }
+                
+                // Format date as "DD MMM YY" (e.g., "18 NOV 25")
+                let formattedDate = current.date || 'Data não informada';
+                if (current.date && current.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    const [year, month, day] = current.date.split('-');
+                    const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+                    formattedDate = `${day} ${months[parseInt(month) - 1]} ${year.slice(-2)}`;
+                }
                 
                 return `
                     <div class="schedule-card">
                         ${hasSubstitution ? `<div class="substitution-badge">🔄 Substituição</div>` : ''}
                         <div class="card-header">
-                            <div class="card-date">${current.date || 'Data não informada'}</div>
+                            <div class="card-date">${formattedDate}</div>
                             ${current.time ? `<div class="card-time">⏰ ${current.time}</div>` : ''}
                         </div>
-                        <div class="card-service">${current.service || 'Serviço não especificado'}</div>
+                        <div class="card-service">${serviceName}</div>
                         
                         ${hasSubstitution ? `
                             <div class="substituted-person">
                                 ${substituted.map(s => `
                                     <span class="strikethrough-small">
-                                        ${s.rank ? s.rank + ' ' : ''}${s.name || ''}
+                                        ${s.rank ? s.rank.toUpperCase() + ' ' : ''}${s.name || ''}
                                     </span>
                                 `).join(' → ')}
                             </div>
@@ -626,7 +680,7 @@
                         <div class="card-person">
                             <div class="person-icon">${initial}</div>
                             <div class="person-info">
-                                ${current.rank ? `<div class="person-rank">${current.rank}</div>` : ''}
+                                ${current.rank ? `<div class="person-rank">${current.rank.toUpperCase()}</div>` : ''}
                                 <div class="person-name">${current.name || 'Nome não informado'}</div>
                             </div>
                         </div>

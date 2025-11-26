@@ -8,6 +8,36 @@ import sys
 import json
 import pdfplumber
 
+def normalize_service_name(service):
+    """
+    Normalize service names to match between Previsão and Boletim Interno
+    """
+    if not service:
+        return service
+    
+    # Normalize common abbreviations and variations
+    normalized = service.strip()
+    
+    # Map variations to standard names
+    mappings = {
+        'ADJUNTO': 'Adj Oficial de Dia',
+        'SGT DE DIA 1ª CIA SUP': 'Sgt de Dia da 1ª Cia Sup',
+        'SGT DE DIA 2ª CIA SUP': 'Sgt de Dia da 2ª Cia Sup',
+        'CMT GDA 1ª CIA': 'Cmt da Guarda 1ª Cia Sup',
+        'CMT GDA 2ª CIA': 'Cmt da Guarda 2ª Cia Sup',
+        'CB DA GDA 1ª CIA': 'Cb da Guarda 1ª Cia Sup',
+        'CB DA GDA 2ª CIA (PRINCIPAL)': 'Cb da Guarda Principal 2ª Cia Sup',
+        'CB DA GDA 2ª CIA (PAIOL)': 'Cb da Guarda aos Paióis 2ª Cia Sup',
+    }
+    
+    # Try exact match (case-insensitive)
+    normalized_upper = normalized.upper()
+    for key, value in mappings.items():
+        if normalized_upper == key:
+            return value
+    
+    return normalized
+
 def extract_tables_from_pdf(pdf_path):
     """
     Extract all tables from PDF file
@@ -182,7 +212,7 @@ def extract_tables_from_pdf(pdf_path):
                             if key not in seen:
                                 seen.add(key)
                                 results.append({
-                                    'service': service_name,
+                                    'service': normalize_service_name(service_name),
                                     'date': date,
                                     'rank': person.get('rank'),
                                     'name': person.get('name'),

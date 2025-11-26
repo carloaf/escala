@@ -65,4 +65,18 @@ async function exists({ service, date, rank, name }) {
   return result.rowCount > 0;
 }
 
-module.exports = { insert, all, findByName, findByRankAndName, findByMilitaryId, deleteAll, exists };
+async function deleteByDate(date) {
+  // First delete related schedule_changes
+  const deleteChangesQuery = `
+    DELETE FROM schedule_changes 
+    WHERE schedule_id IN (SELECT id FROM schedules WHERE date = $1)
+  `;
+  await pool.query(deleteChangesQuery, [date]);
+  
+  // Then delete schedules
+  const deleteSchedulesQuery = `DELETE FROM schedules WHERE date = $1`;
+  const result = await pool.query(deleteSchedulesQuery, [date]);
+  return result.rowCount;
+}
+
+module.exports = { insert, all, findByName, findByRankAndName, findByMilitaryId, deleteAll, exists, deleteByDate };

@@ -5,15 +5,53 @@ const path = require('path');
 const execFileAsync = promisify(execFile);
 
 /**
- * PDF Extractor V7 - Python pdfplumber integration
+ * Detect PDF type (Previsão or Boletim Interno)
+ */
+async function detectPdfType(filePath) {
+  console.log('Detectando tipo de PDF...\n');
+  
+  const pythonScript = path.join(__dirname, '..', '..', 'detect_pdf_type.py');
+  
+  try {
+    const { stdout } = await execFileAsync('python3', [pythonScript, filePath], {
+      maxBuffer: 10 * 1024 * 1024
+    });
+    
+    const result = JSON.parse(stdout);
+    
+    if (result.error) {
+      throw new Error(`Detector error: ${result.error}`);
+    }
+    
+    console.log(`Tipo de PDF detectado: ${result.type}\n`);
+    return result.type;
+    
+  } catch (error) {
+    console.error('Erro ao detectar tipo de PDF:', error);
+    // Default to 'previsao' if detection fails
+    return 'previsao';
+  }
+}
+
+/**
+ * PDF Extractor - Auto-detects PDF type and uses appropriate extractor
  * 
- * Uses Python's pdfplumber library for accurate table cell detection
- * This solves the problem of cells spanning multiple lines or containing multiple people
+ * Supports:
+ * - "Previsão da Escala" (table format) 
+ * - "Boletim Interno" (text format with SERVIÇOS DIÁRIOS section)
  */
 async function extractFromPdf(filePath) {
-  console.log('Extraindo tabelas do PDF usando pdfplumber...\n');
+  // First, detect the PDF type
+  const pdfType = await detectPdfType(filePath);
   
-  const pythonScript = path.join(__dirname, '..', '..', 'extract_pdf_tables.py');
+  let pythonScript;
+  if (pdfType === 'boletim_interno') {
+    console.log('Usando extrator de Boletim Interno...\n');
+    pythonScript = path.join(__dirname, '..', '..', 'extract_boletim_interno.py');
+  } else {
+    console.log('Usando extrator de Previsão da Escala (tabelas)...\n');
+    pythonScript = path.join(__dirname, '..', '..', 'extract_pdf_tables.py');
+  }
   
   try {
     const { stdout, stderr } = await execFileAsync('python3', [pythonScript, filePath], {
@@ -48,7 +86,7 @@ async function extractFromPdf(filePath) {
       console.log(`${service}: ${byService[service].length} registros`);
     });
     
-    return results;
+    return { results, pdfType };
     
   } catch (error) {
     console.error('Erro ao executar extractor Python:', error);

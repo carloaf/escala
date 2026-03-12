@@ -23,4 +23,14 @@ async function getUser(req, res) {
   }
 }
 
-module.exports = { listUsers, getUser };
+async function getMe(req, res) {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    return res.json(user);
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch user' });
+  }
+}
+
+module.exports = { listUsers, getUser, getMe };

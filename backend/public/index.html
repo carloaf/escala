@@ -3,7 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="0; url=/login.html">
     <title>Sistema de Gerenciamento de Escalas</title>
+    <script>
+        const token = localStorage.getItem('token');
+        const user = localStorage.getItem('user');
+        if (token && user) {
+            const userData = JSON.parse(user);
+            window.location.replace(userData.role === 'admin' ? '/dashboard.html' : '/my-schedules.html');
+        } else {
+            window.location.replace('/login.html');
+        }
+    </script>
     <style>
         * {
             margin: 0;

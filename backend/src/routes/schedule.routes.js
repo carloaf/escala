@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { uploadPdf, listSchedules, getMySchedules, getChanges } = require('../controllers/schedule.controller');
+const { uploadPdf, listSchedules, getMySchedules, getChanges, getReport, getReportDateRange } = require('../controllers/schedule.controller');
 const { authenticate, requireAdmin } = require('../middleware/auth.middleware');
 
 const router = express.Router();
@@ -35,5 +35,11 @@ router.get('/my', authenticate, getMySchedules);
 
 // GET /api/schedules/changes - Get unnotified changes (admin only)
 router.get('/changes', authenticate, requireAdmin, getChanges);
+
+// GET /api/schedules/report - Relatório por militar e graduação (admin only)
+router.get('/report', authenticate, requireAdmin, getReport);
+
+// GET /api/schedules/report/range - Período disponível no BD (admin only)
+router.get('/report/range', authenticate, requireAdmin, getReportDateRange);
 
 module.exports = router;

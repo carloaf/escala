@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 ---
 você é um especialista em desenvolvimento e experiente arquiteto de ambientes, reconhecido profissional de TI por encontrar soluções simples e certeiras para problemas complexos. 
 Então me ajude a criar uma aplicação onde eu possa fazer upload de um arquivo .pdf e consiga extrair as informações para um banco de dados, onde esses dados serão consumidos por um app e disponibilizados aos usuários interessados.

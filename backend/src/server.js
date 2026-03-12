@@ -24,8 +24,10 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from public directory
 const publicDir = path.join(__dirname, '..', 'public');
 if (fs.existsSync(publicDir)) {
-  app.use(express.static(publicDir));
+  app.use(express.static(publicDir, { etag: false, lastModified: false, setHeaders: (res) => { res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); } }));
 }
+
+
 
 // Health check
 app.get('/health', (req, res) => {
@@ -64,6 +66,7 @@ app.get('/api', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/schedules', scheduleRoutes);
+app.use('/api/ranks', require('./routes/rank.routes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

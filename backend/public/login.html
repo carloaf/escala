@@ -246,7 +246,9 @@
         const user = localStorage.getItem('user');
         
         if (token && user) {
-            showUserInfo(JSON.parse(user), token);
+            const userData = JSON.parse(user);
+            // Already logged in: redirect to appropriate dashboard
+            window.location.href = userData.role === 'admin' ? '/dashboard.html' : '/my-schedules.html';
         }
         
         document.getElementById('loginForm').addEventListener('submit', async (e) => {

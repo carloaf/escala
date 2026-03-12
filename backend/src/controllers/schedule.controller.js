@@ -16,14 +16,39 @@ async function uploadPdf(req, res) {
     // Get existing schedules to detect changes
     const existingSchedules = await Schedule.all();
     
+    // Get unique dates from incoming data
+    const incomingDates = [...new Set(rows.map(r => r.date))];
+    
     // If Boletim Interno: delete all schedules for the same date(s)
     // Boletim is the DEFINITIVE schedule, replacing any "Previsão" data
     if (pdfType === 'boletim_interno') {
-      const dates = [...new Set(rows.map(r => r.date))];
-      console.log(`\nBoletim Interno detectado! Deletando escalas existentes para: ${dates.join(', ')}\n`);
+      console.log(`\nBoletim Interno detectado! Deletando escalas existentes para: ${incomingDates.join(', ')}\n`);
       
-      for (const date of dates) {
+      for (const date of incomingDates) {
         await Schedule.deleteByDate(date);
+      }
+    } else {
+      // If Previsão: check if any incoming date already has Boletim Interno data
+      // Boletim data is identified by services containing "Cia Sup"
+      const blockedDates = [];
+      
+      for (const date of incomingDates) {
+        const existingForDate = existingSchedules.filter(s => s.date === date);
+        const hasBoletimData = existingForDate.some(s => 
+          s.service && (s.service.includes('1ª Cia Sup') || s.service.includes('2ª Cia Sup'))
+        );
+        
+        if (hasBoletimData) {
+          blockedDates.push(date);
+        }
+      }
+      
+      if (blockedDates.length > 0) {
+        return res.status(400).json({
+          error: 'Cannot upload Previsão data for dates that already have Boletim Interno data',
+          blockedDates: blockedDates,
+          message: `As datas ${blockedDates.join(', ')} já possuem dados de Boletim Interno (escala definitiva). Não é possível sobrescrever com Previsão da Escala.`
+        });
       }
     }
 
@@ -150,4 +175,29 @@ async function getChanges(req, res) {
   }
 }
 
-module.exports = { uploadPdf, listSchedules, getMySchedules, getChanges };
+async function getReport(req, res) {
+  try {
+    const { date_from, date_to } = req.query;
+    if (!date_from || !date_to) {
+      return res.status(400).json({ error: 'date_from e date_to são obrigatórios (YYYY-MM-DD)' });
+    }
+    const [byPerson, byRank] = await Promise.all([
+      Schedule.reportByPerson({ dateFrom: date_from, dateTo: date_to }),
+      Schedule.reportByRank({ dateFrom: date_from, dateTo: date_to }),
+    ]);
+    res.json({ date_from, date_to, by_person: byPerson, by_rank: byRank });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function getReportDateRange(req, res) {
+  try {
+    const range = await Schedule.reportDateRange();
+    res.json(range);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { uploadPdf, listSchedules, getMySchedules, getChanges, getReport, getReportDateRange };

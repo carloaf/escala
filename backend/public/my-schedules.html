@@ -396,6 +396,48 @@
                 width: 100%;
             }
         }
+
+        .pagination-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: #f0f4f0;
+            border: 1px solid #c8d8c8;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .page-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.45rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: var(--secondary-color);
+        }
+
+        .page-btn:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .page-info small {
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -450,6 +492,8 @@
 
     <script>
         let allSchedules = [];
+        let lastRenderedSchedules = [];
+        let currentMyPage = 0;
         let currentUser = null;
 
         async function loadUserInfo() {
@@ -545,10 +589,17 @@
                 filtered = filtered.filter(s => s.date && s.date.includes(dateFilter));
             }
 
+            currentMyPage = 0;
             renderSchedules(filtered);
         }
 
+        function changeMyPage(delta) {
+            currentMyPage += delta;
+            renderSchedules(lastRenderedSchedules);
+        }
+
         function renderSchedules(schedules) {
+            lastRenderedSchedules = schedules;
             const container = document.getElementById('schedulesContainer');
             const emptyContainer = document.getElementById('emptyContainer');
 
@@ -565,7 +616,6 @@
                 return;
             }
 
-            container.style.display = 'grid';
             emptyContainer.style.display = 'none';
 
             // Sort by date (descending), then by service
@@ -614,7 +664,43 @@
                 });
             }
 
-            container.innerHTML = displaySchedules.map(item => {
+            // Pagination: 7 days per page
+            const PAGE_SIZE = 7;
+            const uniqueDates = [...new Set(displaySchedules.map(item => {
+                const s = isBoletimInterno ? item : item.current;
+                return s.date;
+            }))].sort((a, b) => new Date(b) - new Date(a));
+
+            const totalPages = Math.ceil(uniqueDates.length / PAGE_SIZE);
+            if (currentMyPage >= totalPages) currentMyPage = totalPages - 1;
+            if (currentMyPage < 0) currentMyPage = 0;
+
+            const pageDateSet = new Set(uniqueDates.slice(currentMyPage * PAGE_SIZE, (currentMyPage + 1) * PAGE_SIZE));
+            const pagedItems = displaySchedules.filter(item => {
+                const s = isBoletimInterno ? item : item.current;
+                return pageDateSet.has(s.date);
+            });
+
+            const sortedPageDates = [...pageDateSet].sort();
+            const fmtDate = d => {
+                if (!d) return '';
+                const [y, m, day] = d.split('-');
+                const ms = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+                return `${day} ${ms[parseInt(m)-1]} ${y.slice(-2)}`;
+            };
+            const firstDate = sortedPageDates[0];
+            const lastDate = sortedPageDates[sortedPageDates.length - 1];
+
+            const paginationHtml = totalPages > 1 ? `
+                <div class="pagination-bar">
+                    <button class="page-btn" onclick="changeMyPage(-1)" ${currentMyPage === 0 ? 'disabled' : ''}>\u2190 Anterior</button>
+                    <span class="page-info">${fmtDate(firstDate)} &mdash; ${fmtDate(lastDate)} &nbsp;<small>(${currentMyPage + 1}/${totalPages})</small></span>
+                    <button class="page-btn" onclick="changeMyPage(1)" ${currentMyPage >= totalPages - 1 ? 'disabled' : ''}>Pr\u00f3ximo \u2192</button>
+                </div>
+            ` : '';
+
+            container.style.display = 'block';
+            container.innerHTML = paginationHtml + '<div class="schedules-grid">' + pagedItems.map(item => {
                 let current, substituted, hasSubstitution;
                 
                 if (isBoletimInterno) {
@@ -686,7 +772,13 @@
                         </div>
                     </div>
                 `;
-            }).join('');
+            }).join('') + '</div>' + (totalPages > 1 ? `
+                <div class="pagination-bar" style="margin-top:1rem;">
+                    <button class="page-btn" onclick="changeMyPage(-1)" ${currentMyPage === 0 ? 'disabled' : ''}>← Anterior</button>
+                    <span class="page-info">${fmtDate(firstDate)} &mdash; ${fmtDate(lastDate)} &nbsp;<small>(${currentMyPage + 1}/${totalPages})</small></span>
+                    <button class="page-btn" onclick="changeMyPage(1)" ${currentMyPage >= totalPages - 1 ? 'disabled' : ''}>Próximo →</button>
+                </div>
+            ` : '');
         }
 
         function updateStats(schedules) {

@@ -79,4 +79,46 @@ async function deleteByDate(date) {
   return result.rowCount;
 }
 
-module.exports = { insert, all, findByName, findByRankAndName, findByMilitaryId, deleteAll, exists, deleteByDate };
+async function reportByPerson({ dateFrom, dateTo }) {
+  const query = `
+    SELECT
+      rank,
+      name,
+      COUNT(*) AS total,
+      COUNT(*) FILTER (WHERE EXTRACT(DOW FROM date::date) BETWEEN 1 AND 5) AS weekday_total,
+      COUNT(*) FILTER (WHERE EXTRACT(DOW FROM date::date) IN (0, 6))       AS weekend_total
+    FROM schedules
+    WHERE date BETWEEN $1 AND $2
+    GROUP BY rank, name
+    ORDER BY rank ASC, name ASC
+  `;
+  const result = await pool.query(query, [dateFrom, dateTo]);
+  return result.rows;
+}
+
+async function reportByRank({ dateFrom, dateTo }) {
+  const query = `
+    SELECT
+      rank,
+      COUNT(*) AS total,
+      COUNT(DISTINCT name) AS militares,
+      COUNT(*) FILTER (WHERE EXTRACT(DOW FROM date::date) BETWEEN 1 AND 5)                                     AS weekday_total,
+      COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM date::date) BETWEEN 1 AND 5 THEN name END) AS weekday_militares,
+      COUNT(*) FILTER (WHERE EXTRACT(DOW FROM date::date) IN (0, 6))                                          AS weekend_total,
+      COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM date::date) IN (0, 6) THEN name END)       AS weekend_militares
+    FROM schedules
+    WHERE date BETWEEN $1 AND $2
+    GROUP BY rank
+    ORDER BY rank ASC
+  `;
+  const result = await pool.query(query, [dateFrom, dateTo]);
+  return result.rows;
+}
+
+async function reportDateRange() {
+  const query = `SELECT MIN(date) AS date_from, MAX(date) AS date_to FROM schedules`;
+  const result = await pool.query(query);
+  return result.rows[0];
+}
+
+module.exports = { insert, all, findByName, findByRankAndName, findByMilitaryId, deleteAll, exists, deleteByDate, reportByPerson, reportByRank, reportDateRange };

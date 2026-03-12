@@ -92,6 +92,17 @@
             display: inline-block;
         }
 
+        .btn-reports {
+            background: #2d6a4f;
+            color: white;
+        }
+
+        .btn-reports:hover {
+            background: #1a472a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(29, 100, 70, 0.3);
+        }
+
         .btn-logout {
             background: #ef4444;
             color: white;
@@ -285,6 +296,48 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .pagination-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: #f0f4f0;
+            border: 1px solid #c8d8c8;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .page-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.45rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: #5568d3;
+        }
+
+        .page-btn:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            font-size: 0.95rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .page-info small {
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -297,7 +350,10 @@
                     <p id="userEmail"></p>
                 </div>
             </div>
-            <button class="btn btn-logout" onclick="logout()">Sair</button>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <a href="/relatorios.html" class="btn btn-reports">📊 Relatórios</a>
+                <button class="btn btn-logout" onclick="logout()">Sair</button>
+            </div>
         </div>
 
         <div class="main-content">
@@ -411,6 +467,13 @@
         }
 
         // Load schedules
+        function changePage(delta) {
+            const container = document.getElementById('schedulesContainer');
+            const current = parseInt(container.dataset.page || '0');
+            container.dataset.page = current + delta;
+            loadSchedules();
+        }
+
         async function loadSchedules() {
             const container = document.getElementById('schedulesContainer');
             
@@ -461,8 +524,30 @@
                 // Sort dates
                 const sortedDates = Object.keys(groupedByDate).sort();
 
-                // Build table
-                let html = `
+                // Pagination: 7 days per page
+                const PAGE_SIZE = 7;
+                const totalPages = Math.ceil(sortedDates.length / PAGE_SIZE);
+                let currentPage = parseInt(container.dataset.page || '0');
+                if (currentPage >= totalPages) currentPage = totalPages - 1;
+                if (currentPage < 0) currentPage = 0;
+                container.dataset.page = currentPage;
+
+                const pageDates = sortedDates.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+
+                // Pagination controls
+                const firstDate = pageDates[0];
+                const lastDate = pageDates[pageDates.length - 1];
+                const fmtDate = d => { if (!d) return ''; const [y,m,day] = d.split('-'); const ms=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']; return `${day} ${ms[parseInt(m)-1]} ${y.slice(-2)}`; };
+
+                const paginationControls = totalPages > 1 ? `
+                    <div class="pagination-bar">
+                        <button class="page-btn" onclick="changePage(-1)" ${currentPage === 0 ? 'disabled' : ''}>&#8592; Anterior</button>
+                        <span class="page-info">${fmtDate(firstDate)} &mdash; ${fmtDate(lastDate)} &nbsp;<small>(${currentPage + 1}/${totalPages})</small></span>
+                        <button class="page-btn" onclick="changePage(1)" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Próximo &#8594;</button>
+                    </div>
+                ` : '';
+
+                let html = paginationControls + `
                     <table class="schedules-table">
                         <thead>
                             <tr>
@@ -474,7 +559,7 @@
                         <tbody>
                 `;
 
-                sortedDates.forEach(date => {
+                pageDates.forEach(date => {
                     const dateSchedules = groupedByDate[date];
                     
                     // Format date properly from ISO format
@@ -541,6 +626,14 @@
                 });
 
                 html += '</tbody></table>';
+                if (totalPages > 1) {
+                    html += `
+                    <div class="pagination-bar" style="margin-top:1rem;">
+                        <button class="page-btn" onclick="changePage(-1)" ${currentPage === 0 ? 'disabled' : ''}>&#8592; Anterior</button>
+                        <span class="page-info">${fmtDate(firstDate)} &mdash; ${fmtDate(lastDate)} &nbsp;<small>(${currentPage + 1}/${totalPages})</small></span>
+                        <button class="page-btn" onclick="changePage(1)" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Próximo &#8594;</button>
+                    </div>`;
+                }
                 container.innerHTML = html;
 
             } catch (error) {

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios - Escala Militar</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a472a 0%, #2d6a4f 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        .header {
+            background: rgba(255,255,255,0.97);
+            padding: 18px 28px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .header-icon { font-size: 2rem; }
+        .header h1 { font-size: 1.4rem; color: #1a472a; }
+        .header p { font-size: 0.85rem; color: #666; }
+
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-back { background: #6b7280; color: white; }
+        .btn-back:hover { background: #4b5563; }
+        .btn-primary { background: #1a472a; color: white; }
+        .btn-primary:hover { background: #2d5f3f; }
+        .btn-export { background: #0f766e; color: white; }
+        .btn-export:hover { background: #0d5c55; }
+
+        .card {
+            background: rgba(255,255,255,0.97);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            color: #1a472a;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+        }
+
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .filter-group label { font-size: 0.82rem; font-weight: 600; color: #374151; }
+        .filter-group input, .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #111;
+            background: white;
+        }
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: #1a472a;
+            box-shadow: 0 0 0 2px rgba(26,71,42,0.15);
+        }
+
+        /* Ranking por graduação */
+        .rank-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 4px;
+        }
+        .rank-card {
+            flex: 1 1 130px;
+            background: #f0faf4;
+            border: 1px solid #a7f3d0;
+            border-radius: 10px;
+            padding: 16px 20px;
+            text-align: center;
+        }
+        .rank-card .rank-label { font-size: 1rem; font-weight: 700; color: #1a472a; }
+        .rank-card .rank-total { font-size: 2rem; font-weight: 800; color: #065f46; line-height: 1.1; margin: 4px 0; }
+        .rank-card .rank-sub { font-size: 0.78rem; color: #6b7280; }
+
+        /* Tabela individual */
+        .table-wrapper { overflow-x: auto; margin-top: 8px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        thead th {
+            background: #1a472a;
+            color: white;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        tbody tr:nth-child(even) { background: #f9fafb; }
+        tbody tr:hover { background: #ecfdf5; }
+        tbody td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111;
+        }
+        .rank-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .total-num {
+            font-weight: 700;
+            color: #1a472a;
+            font-size: 1rem;
+        }
+
+        .search-box {
+            padding: 7px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            width: 220px;
+        }
+        .search-box:focus { outline: none; border-color: #1a472a; }
+
+        .result-summary {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 6px;
+        }
+
+        .empty-msg {
+            text-align: center;
+            padding: 40px 20px;
+            color: #9ca3af;
+            font-size: 0.95rem;
+        }
+
+        .loading-msg {
+            text-align: center;
+            padding: 30px;
+            color: #6b7280;
+        }
+
+        .actions-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .filters { flex-direction: column; }
+            .rank-grid { flex-direction: column; }
+            .header { flex-direction: column; gap: 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <div class="header-left">
+            <span class="header-icon">📊</span>
+            <div>
+                <h1>Relatórios de Escala</h1>
+                <p>Análise de serviços por militar e por graduação</p>
+            </div>
+        </div>
+        <a href="/dashboard.html" class="btn btn-back">← Voltar ao Dashboard</a>
+    </div>
+
+    <!-- Filtros de período -->
+    <div class="card">
+        <h2>🗓️ Período de Análise</h2>
+        <div class="filters">
+            <div class="filter-group">
+                <label for="dateFrom">Data inicial</label>
+                <input type="date" id="dateFrom">
+            </div>
+            <div class="filter-group">
+                <label for="dateTo">Data final</label>
+                <input type="date" id="dateTo">
+            </div>
+            <div class="filter-group">
+                <label for="filterRank">Graduação</label>
+                <select id="filterRank" onchange="filterTable()">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filterDayType">Tipo de dia</label>
+                <select id="filterDayType" onchange="filterTable()">
+                    <option value="">Total</option>
+                    <option value="weekday">Dia útil</option>
+                    <option value="weekend">Final de semana</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="loadReport()">🔍 Gerar Relatório</button>
+        </div>
+        <p class="result-summary" id="periodInfo"></p>
+    </div>
+
+    <!-- Resumo por graduação -->
+    <div class="card" id="cardRank" style="display:none">
+        <h2>🎖️ Total por Graduação</h2>
+        <div class="rank-grid" id="rankGrid"></div>
+    </div>
+
+    <!-- Tabela individual -->
+    <div class="card" id="cardPerson" style="display:none">
+        <h2>👤 Serviços por Militar</h2>
+        <div class="actions-bar">
+            <input type="text" class="search-box" id="searchBox" placeholder="Filtrar por nome..." oninput="filterTable()">
+            <div style="display:flex;gap:10px;align-items:center;">
+                <span class="result-summary" id="tableCount"></span>
+                <button class="btn btn-export" onclick="exportCSV()" id="btnExport" style="display:none">⬇️ Exportar CSV</button>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table id="personTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Graduação</th>
+                        <th>Nome</th>
+                        <th style="text-align:center">Qtd. Serviços</th>
+                    </tr>
+                </thead>
+                <tbody id="personBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const API_URL = '/api';
+    const token = localStorage.getItem('token');
+
+    if (!token) { window.location.href = '/login.html'; }
+
+    // Verificar role
+    (async () => {
+        try {
+            const r = await fetch(`${API_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!r.ok) { window.location.href = '/login.html'; return; }
+            const u = await r.json();
+            if (u.role !== 'admin') { window.location.href = '/my-schedules.html'; return; }
+            await Promise.all([loadDateRange(), loadRanks()]);
+        } catch { window.location.href = '/login.html'; }
+    })();
+
+    async function loadRanks() {
+        const sel = document.getElementById('filterRank');
+        // Remove all options except first
+        while (sel.options.length > 1) sel.remove(1);
+        try {
+            const r = await fetch(`${API_URL}/ranks`);
+            if (!r.ok) return;
+            const ranks = await r.json();
+            ranks.forEach(function(rank) {
+                const opt = document.createElement('option');
+                opt.value = rank.abbreviation;
+                opt.textContent = rank.name + ' (' + rank.abbreviation + ')';
+                sel.appendChild(opt);
+            });
+        } catch (e) { console.error('Erro ao carregar graduações:', e); }
+    }
+
+    async function loadDateRange() {
+        try {
+            const r = await fetch(`${API_URL}/schedules/report/range`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!r.ok) return;
+            const { date_from, date_to } = await r.json();
+            if (date_from) document.getElementById('dateFrom').value = date_from;
+            if (date_to)   document.getElementById('dateTo').value   = date_to;
+            document.getElementById('periodInfo').textContent =
+                `Dados disponíveis de ${fmtDate(date_from)} até ${fmtDate(date_to)}`;
+        } catch {}
+    }
+
+    let allPersonRows = [];
+    let allRankRows   = [];
+
+    async function loadReport() {
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo   = document.getElementById('dateTo').value;
+        if (!dateFrom || !dateTo) { alert('Selecione o período.'); return; }
+        if (dateFrom > dateTo) { alert('Data inicial deve ser anterior à data final.'); return; }
+
+        document.getElementById('cardRank').style.display   = 'none';
+        document.getElementById('cardPerson').style.display = 'none';
+        document.getElementById('btnExport').style.display  = 'none';
+        document.getElementById('rankGrid').innerHTML   = '<p class="loading-msg">⏳ Carregando...</p>';
+        document.getElementById('personBody').innerHTML = '';
+        document.getElementById('cardRank').style.display = 'block';
+
+        try {
+            const r = await fetch(
+                `${API_URL}/schedules/report?date_from=${dateFrom}&date_to=${dateTo}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (!r.ok) throw new Error((await r.json()).error);
+            const data = await r.json();
+
+            renderRank(data.by_rank);
+            renderPerson(data.by_person);
+            document.getElementById('btnExport').style.display = 'inline-block';
+            document.getElementById('periodInfo').textContent =
+                `Exibindo: ${fmtDate(dateFrom)} a ${fmtDate(dateTo)} · ${data.by_person.length} militar${data.by_person.length !== 1 ? 'es' : ''}`;
+        } catch (err) {
+            document.getElementById('rankGrid').innerHTML =
+                `<p class="empty-msg">❌ Erro: ${err.message}</p>`;
+        }
+    }
+
+    function renderRank(rows) {
+        allRankRows = rows;
+        renderFilteredRank();
+        document.getElementById('cardRank').style.display = 'block';
+    }
+
+    function renderFilteredRank() {
+        const grid    = document.getElementById('rankGrid');
+        const dayType = document.getElementById('filterDayType').value;
+        const totalKey = dayType === 'weekday' ? 'weekday_total' : dayType === 'weekend' ? 'weekend_total' : 'total';
+        const milKey   = dayType === 'weekday' ? 'weekday_militares' : dayType === 'weekend' ? 'weekend_militares' : 'militares';
+
+        const filtered = allRankRows.filter(r => Number(r[totalKey]) > 0);
+        filtered.sort((a, b) => Number(b[totalKey]) - Number(a[totalKey]));
+
+        if (!filtered.length) { grid.innerHTML = '<p class="empty-msg">Nenhum dado encontrado.</p>'; return; }
+
+        grid.innerHTML = filtered.map(r => `
+            <div class="rank-card">
+                <div class="rank-label">${r.rank || '—'}</div>
+                <div class="rank-total">${r[totalKey]}</div>
+                <div class="rank-sub">${r[milKey]} militar${Number(r[milKey]) != 1 ? 'es' : ''}</div>
+            </div>
+        `).join('');
+    }
+
+
+
+    function renderPerson(rows) {
+        allPersonRows = rows;
+        document.getElementById('searchBox').value = '';
+        filterTable();
+        document.getElementById('cardPerson').style.display = 'block';
+    }
+
+    function renderFilteredTable(rows) {
+        const tbody = document.getElementById('personBody');
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="empty-msg">Nenhum resultado.</td></tr>';
+            document.getElementById('tableCount').textContent = '';
+            return;
+        }
+
+        // sort by rank asc, then displayTotal desc
+        rows.sort((a, b) => {
+            const rc = (a.rank || '').localeCompare(b.rank || '');
+            return rc !== 0 ? rc : b.displayTotal - a.displayTotal;
+        });
+
+        tbody.innerHTML = rows.map((r, i) => `
+            <tr>
+                <td style="color:#9ca3af;font-size:0.8rem">${i + 1}</td>
+                <td><span class="rank-badge">${r.rank || '—'}</span></td>
+                <td>${r.name || '—'}</td>
+                <td style="text-align:center"><span class="total-num">${r.displayTotal}</span></td>
+            </tr>
+        `).join('');
+
+        document.getElementById('tableCount').textContent =
+            `${rows.length} militar${rows.length !== 1 ? 'es' : ''}`;
+    }
+
+    function filterTable() {
+        const q        = document.getElementById('searchBox').value.toLowerCase().trim();
+        const rank     = document.getElementById('filterRank').value;
+        const dayType  = document.getElementById('filterDayType').value;
+        const totalKey = dayType === 'weekday' ? 'weekday_total' : dayType === 'weekend' ? 'weekend_total' : 'total';
+
+        const filtered = allPersonRows
+            .filter(r => {
+                const nameOk  = !q    || (r.name || '').toLowerCase().includes(q);
+                const rankOk  = !rank || (r.rank || '') === rank;
+                const countOk = Number(r[totalKey]) > 0;
+                return nameOk && rankOk && countOk;
+            })
+            .map(r => ({ ...r, displayTotal: Number(r[totalKey]) }));
+
+        renderFilteredTable(filtered);
+        renderFilteredRank();
+    }
+
+    function exportCSV() {
+        const q       = document.getElementById('searchBox').value.toLowerCase().trim();
+        const rank    = document.getElementById('filterRank').value;
+        const dayType = document.getElementById('filterDayType').value;
+        const totalKey = dayType === 'weekday' ? 'weekday_total' : dayType === 'weekend' ? 'weekend_total' : 'total';
+
+        const rows = allPersonRows.filter(r => {
+            const nameOk  = !q    || (r.name || '').toLowerCase().includes(q);
+            const rankOk  = !rank || (r.rank || '') === rank;
+            const countOk = Number(r[totalKey]) > 0;
+            return nameOk && rankOk && countOk;
+        });
+        if (!rows.length) return;
+
+        const dateFrom  = document.getElementById('dateFrom').value;
+        const dateTo    = document.getElementById('dateTo').value;
+        const rankSuffix = rank    ? `_${rank.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+        const daySuffix  = dayType === 'weekday' ? '_diasuteis' : dayType === 'weekend' ? '_fds' : '';
+
+        const lines = ['Graduacao,Nome,Qtd_Servicos'];
+        rows
+            .slice()
+            .sort((a, b) => (a.rank || '').localeCompare(b.rank || '') || Number(b[totalKey]) - Number(a[totalKey]))
+            .forEach(r => {
+                lines.push(`"${r.rank || ''}","${r.name || ''}",${r[totalKey]}`);
+            });
+
+        const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `relatorio_escala_${dateFrom}_${dateTo}${rankSuffix}${daySuffix}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function fmtDate(d) {
+        if (!d) return '';
+        const [y, m, day] = d.split('-');
+        const ms = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+        return `${day} ${ms[parseInt(m) - 1]} ${y}`;
+    }
+</script>
+</body>
+</html>

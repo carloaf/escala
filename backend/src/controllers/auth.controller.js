@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { JWT_SECRET } = require('../middleware/auth.middleware');
+const { normalizePersonName } = require('../utils/personNameNormalizer');
+const { normalizeRank } = require('../utils/rankNormalizer');
 
 async function register(req, res) {
   try {
@@ -10,7 +12,9 @@ async function register(req, res) {
       name // compatibilidade com código antigo
     } = req.body;
     
-    const warName = war_name || name;
+    const warName = normalizePersonName(war_name || name);
+    const fullName = normalizePersonName(full_name || war_name || name);
+    const normalizedRank = normalizeRank(rank);
     
     if (!email || !password || !warName) {
       return res.status(400).json({ error: 'Email, password and war_name are required' });
@@ -35,8 +39,8 @@ async function register(req, res) {
     }
     
     const user = await User.create({ 
-      email, password, war_name: warName, full_name, 
-      military_id, rank, organization, company, phone, role 
+      email, password, war_name: warName, full_name: fullName,
+      military_id, rank: normalizedRank, organization, company, phone, role 
     });
     
     return res.status(201).json({ 

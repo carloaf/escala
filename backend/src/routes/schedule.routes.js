@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { uploadPdf, listSchedules, getMySchedules, getChanges, getReport, getReportDateRange } = require('../controllers/schedule.controller');
+const { uploadPdf, listSchedules, getMySchedules, getChanges, getReport, getReportDateRange, getReportServiceTypes } = require('../controllers/schedule.controller');
 const { authenticate, requireAdmin } = require('../middleware/auth.middleware');
 
 const router = express.Router();
@@ -41,5 +41,8 @@ router.get('/report', authenticate, requireAdmin, getReport);
 
 // GET /api/schedules/report/range - Período disponível no BD (admin only)
 router.get('/report/range', authenticate, requireAdmin, getReportDateRange);
+
+// GET /api/schedules/report/service-types - Tipos de escala disponíveis (admin only)
+router.get('/report/service-types', authenticate, requireAdmin, getReportServiceTypes);
 
 module.exports = router;

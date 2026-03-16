@@ -8,6 +8,7 @@ const morgan = require('morgan');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const scheduleRoutes = require('./routes/schedule.routes');
+const serviceAliasRoutes = require('./routes/serviceAlias.routes');
 
 // Ensure uploads directory exists
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
@@ -67,6 +68,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/ranks', require('./routes/rank.routes'));
+app.use('/api/service-aliases', serviceAliasRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

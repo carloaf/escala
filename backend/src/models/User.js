@@ -1,8 +1,13 @@
 const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
+const { normalizePersonName } = require('../utils/personNameNormalizer');
+const { normalizeRank } = require('../utils/rankNormalizer');
 
 async function create(userData) {
   const hashedPassword = await bcrypt.hash(userData.password, 10);
+  const normalizedWarName = normalizePersonName(userData.war_name || userData.name);
+  const normalizedFullName = normalizePersonName(userData.full_name || userData.war_name || userData.name);
+  const normalizedRank = normalizeRank(userData.rank);
   
   const query = `
     INSERT INTO users (
@@ -17,10 +22,10 @@ async function create(userData) {
   const values = [
     userData.email,
     hashedPassword,
-    userData.war_name || userData.name, // compatibilidade com código antigo
-    userData.full_name || userData.war_name || userData.name,
+    normalizedWarName,
+    normalizedFullName,
     userData.military_id || null,
-    userData.rank || null,
+    normalizedRank || null,
     userData.organization || null,
     userData.company || null,
     userData.phone || null,

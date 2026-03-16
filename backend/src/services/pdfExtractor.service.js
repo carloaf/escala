@@ -1,6 +1,7 @@
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const path = require('path');
+const { normalizeScheduleRow } = require('../utils/serviceNameNormalizer');
 
 const execFileAsync = promisify(execFile);
 
@@ -71,11 +72,13 @@ async function extractFromPdf(filePath) {
       throw new Error(`Python extractor error: ${results.error}`);
     }
     
-    console.log(`\n=== TOTAL: ${results.length} registros extraídos ===\n`);
+    const normalizedResults = results.map((row) => normalizeScheduleRow(row));
+
+    console.log(`\n=== TOTAL: ${normalizedResults.length} registros extraídos ===\n`);
     
     // Log summary by service
     const byService = {};
-    results.forEach(row => {
+    normalizedResults.forEach(row => {
       if (!byService[row.service]) {
         byService[row.service] = [];
       }
@@ -86,7 +89,7 @@ async function extractFromPdf(filePath) {
       console.log(`${service}: ${byService[service].length} registros`);
     });
     
-    return { results, pdfType };
+    return { results: normalizedResults, pdfType };
     
   } catch (error) {
     console.error('Erro ao executar extractor Python:', error);

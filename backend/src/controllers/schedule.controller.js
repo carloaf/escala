@@ -1,20 +1,32 @@
 const Schedule = require('../models/Schedule');
 const ScheduleChange = require('../models/ScheduleChange');
+const ServiceAlias = require('../models/ServiceAlias');
 const { extractFromPdf } = require('../services/pdfExtractor.service');
+const { normalizeServiceName, normalizeScheduleRow } = require('../utils/serviceNameNormalizer');
+const { normalizePersonName, normalizeSchedulePersonRow } = require('../utils/personNameNormalizer');
+const { normalizeRank, normalizeScheduleRankRow } = require('../utils/rankNormalizer');
 
 async function uploadPdf(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     const filePath = req.file.path;
-    const { results: rows, pdfType } = await extractFromPdf(filePath);
+    const aliasEntries = await ServiceAlias.aliasEntries();
+    const { results, pdfType } = await extractFromPdf(filePath);
+    const rows = results
+      .map((row) => normalizeScheduleRow(row, aliasEntries))
+      .map(normalizeSchedulePersonRow)
+      .map(normalizeScheduleRankRow);
 
     if (!rows || rows.length === 0) {
       return res.status(400).json({ error: 'No data extracted from PDF' });
     }
 
     // Get existing schedules to detect changes
-    const existingSchedules = await Schedule.all();
+    const existingSchedules = (await Schedule.all())
+      .map((row) => normalizeScheduleRow(row, aliasEntries))
+      .map(normalizeSchedulePersonRow)
+      .map(normalizeScheduleRankRow);
     
     // Get unique dates from incoming data
     const incomingDates = [...new Set(rows.map(r => r.date))];
@@ -73,14 +85,15 @@ async function uploadPdf(req, res) {
       );
 
       if (oldSchedule) {
+        const normalizedNewService = normalizeServiceName(r.service, aliasEntries);
         // Detect if anything changed between old and new
-        if (oldSchedule.service !== r.service || 
+        if (oldSchedule.service !== normalizedNewService || 
             oldSchedule.date !== r.date || 
             oldSchedule.time !== r.time) {
           await ScheduleChange.create({
             schedule_id: created.id,
             old_service: oldSchedule.service,
-            new_service: r.service,
+            new_service: normalizedNewService,
             old_date: oldSchedule.date,
             new_date: r.date,
             old_time: oldSchedule.time,
@@ -119,16 +132,18 @@ async function listSchedules(req, res) {
 async function getMySchedules(req, res) {
   try {
     const { name, rank, military_id } = req.user;
+    const normalizedUserName = normalizePersonName(name);
+    const normalizedUserRank = normalizeRank(rank);
     
     let mySchedules;
     // Priority: rank+name > military_id > name
     // Changed priority because military_id may not be populated in schedules table
-    if (rank && name) {
-      mySchedules = await Schedule.findByRankAndName(rank, name);
+    if (normalizedUserRank && normalizedUserName) {
+      mySchedules = await Schedule.findByRankAndName(normalizedUserRank, normalizedUserName);
     } else if (military_id) {
       mySchedules = await Schedule.findByMilitaryId(military_id);
-    } else if (name) {
-      mySchedules = await Schedule.findByName(name);
+    } else if (normalizedUserName) {
+      mySchedules = await Schedule.findByName(normalizedUserName);
     } else {
       return res.status(400).json({ error: 'User has no identifiable information' });
     }
@@ -146,9 +161,9 @@ async function getMySchedules(req, res) {
       // Add all related schedules (for substitution display)
       related.forEach(r => {
         // Mark which one is the current user
-        const isCurrentUser = (rank && r.rank === rank && r.name === name) || 
+        const isCurrentUser = (normalizedUserRank && r.rank === normalizedUserRank && r.name === normalizedUserName) || 
                               (military_id && r.military_id === military_id) ||
-                              (r.name === name);
+                              (r.name === normalizedUserName);
         enrichedSchedules.push({ ...r, isCurrentUser });
       });
     }
@@ -177,15 +192,20 @@ async function getChanges(req, res) {
 
 async function getReport(req, res) {
   try {
-    const { date_from, date_to } = req.query;
+    const { date_from, date_to, service_types } = req.query;
     if (!date_from || !date_to) {
       return res.status(400).json({ error: 'date_from e date_to são obrigatórios (YYYY-MM-DD)' });
     }
+
+    const serviceTypes = typeof service_types === 'string'
+      ? service_types.split(',').map((serviceType) => serviceType.trim()).filter(Boolean)
+      : [];
+
     const [byPerson, byRank] = await Promise.all([
-      Schedule.reportByPerson({ dateFrom: date_from, dateTo: date_to }),
-      Schedule.reportByRank({ dateFrom: date_from, dateTo: date_to }),
+      Schedule.reportByPerson({ dateFrom: date_from, dateTo: date_to, serviceTypes }),
+      Schedule.reportByRank({ dateFrom: date_from, dateTo: date_to, serviceTypes }),
     ]);
-    res.json({ date_from, date_to, by_person: byPerson, by_rank: byRank });
+    res.json({ date_from, date_to, service_types: serviceTypes, by_person: byPerson, by_rank: byRank });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -200,4 +220,13 @@ async function getReportDateRange(req, res) {
   }
 }
 
-module.exports = { uploadPdf, listSchedules, getMySchedules, getChanges, getReport, getReportDateRange };
+async function getReportServiceTypes(req, res) {
+  try {
+    const serviceTypes = await Schedule.reportServiceTypes();
+    res.json(serviceTypes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { uploadPdf, listSchedules, getMySchedules, getChanges, getReport, getReportDateRange, getReportServiceTypes };

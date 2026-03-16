@@ -91,6 +91,96 @@
             border-color: #1a472a;
             box-shadow: 0 0 0 2px rgba(26,71,42,0.15);
         }
+        .filter-dropdown {
+            min-width: 320px;
+            position: relative;
+        }
+        .filter-dropdown details {
+            position: relative;
+        }
+        .filter-dropdown summary {
+            list-style: none;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #111;
+            background: white;
+            cursor: pointer;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .filter-dropdown summary::-webkit-details-marker {
+            display: none;
+        }
+        .filter-dropdown details[open] summary {
+            border-color: #1a472a;
+            box-shadow: 0 0 0 2px rgba(26,71,42,0.15);
+        }
+        .filter-dropdown summary::after {
+            content: '▾';
+            color: #6b7280;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .filter-dropdown-panel {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            width: 100%;
+            max-height: 240px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+            padding: 8px;
+            z-index: 20;
+        }
+        .filter-dropdown-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 4px 4px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 6px;
+        }
+        .filter-dropdown-action {
+            border: none;
+            background: none;
+            color: #1a472a;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
+        .filter-dropdown-action:hover {
+            text-decoration: underline;
+        }
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #111;
+            font-size: 0.88rem;
+        }
+        .filter-option:hover {
+            background: #ecfdf5;
+        }
+        .filter-option input {
+            margin: 0;
+        }
+        .filter-help {
+            font-size: 0.75rem;
+            color: #6b7280;
+            max-width: 320px;
+        }
 
         /* Ranking por graduação */
         .rank-grid {
@@ -147,6 +237,36 @@
             font-weight: 700;
             color: #1a472a;
             font-size: 1rem;
+        }
+        .service-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .service-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eef2ff;
+            color: #1e3a8a;
+            border: 1px solid #c7d2fe;
+            border-radius: 999px;
+            padding: 4px 8px 4px 10px;
+            font-size: 0.8rem;
+            line-height: 1.2;
+        }
+        .service-pill-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #1e3a8a;
+            color: white;
+            font-size: 0.74rem;
+            font-weight: 700;
         }
 
         .search-box {
@@ -233,6 +353,16 @@
                     <option value="weekend">Final de semana</option>
                 </select>
             </div>
+            <div class="filter-group">
+                <label for="filterServices">Tipos de escala</label>
+                <div class="filter-dropdown">
+                    <details id="filterServicesDetails">
+                        <summary id="filterServicesSummary">Todos os tipos</summary>
+                        <div class="filter-dropdown-panel" id="filterServices"></div>
+                    </details>
+                </div>
+                <span class="filter-help">Clique para expandir e marque um ou mais tipos de escala.</span>
+            </div>
             <button class="btn btn-primary" onclick="loadReport()">🔍 Gerar Relatório</button>
         </div>
         <p class="result-summary" id="periodInfo"></p>
@@ -261,6 +391,7 @@
                         <th>#</th>
                         <th>Graduação</th>
                         <th>Nome</th>
+                        <th>Serviço</th>
                         <th style="text-align:center">Qtd. Serviços</th>
                     </tr>
                 </thead>
@@ -284,7 +415,7 @@
             if (!r.ok) { window.location.href = '/login.html'; return; }
             const u = await r.json();
             if (u.role !== 'admin') { window.location.href = '/my-schedules.html'; return; }
-            await Promise.all([loadDateRange(), loadRanks()]);
+            await Promise.all([loadDateRange(), loadRanks(), loadServiceTypes()]);
         } catch { window.location.href = '/login.html'; }
     })();
 
@@ -319,12 +450,107 @@
         } catch {}
     }
 
+    let availableServiceTypes = [];
+    let selectedServiceTypes = [];
+
+    async function loadServiceTypes() {
+        try {
+            const r = await fetch(`${API_URL}/schedules/report/service-types`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!r.ok) return;
+            availableServiceTypes = await r.json();
+            selectedServiceTypes = [];
+            renderServiceTypeOptions();
+        } catch (e) {
+            console.error('Erro ao carregar tipos de escala:', e);
+        }
+    }
+
+    function renderServiceTypeOptions() {
+        const container = document.getElementById('filterServices');
+        container.innerHTML = '';
+
+        const actions = document.createElement('div');
+        actions.className = 'filter-dropdown-actions';
+
+        const selectAllButton = document.createElement('button');
+        selectAllButton.type = 'button';
+        selectAllButton.className = 'filter-dropdown-action';
+        selectAllButton.textContent = 'Selecionar todos';
+        selectAllButton.onclick = function(event) {
+            event.preventDefault();
+            selectedServiceTypes = [...availableServiceTypes];
+            renderServiceTypeOptions();
+        };
+
+        const clearButton = document.createElement('button');
+        clearButton.type = 'button';
+        clearButton.className = 'filter-dropdown-action';
+        clearButton.textContent = 'Limpar';
+        clearButton.onclick = function(event) {
+            event.preventDefault();
+            selectedServiceTypes = [];
+            renderServiceTypeOptions();
+        };
+
+        actions.appendChild(selectAllButton);
+        actions.appendChild(clearButton);
+        container.appendChild(actions);
+
+        availableServiceTypes.forEach(function(serviceType, index) {
+            const optionLabel = document.createElement('label');
+            optionLabel.className = 'filter-option';
+            optionLabel.htmlFor = `service-type-${index}`;
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `service-type-${index}`;
+            checkbox.checked = selectedServiceTypes.includes(serviceType);
+            checkbox.addEventListener('change', function() {
+                if (checkbox.checked) {
+                    selectedServiceTypes = [...selectedServiceTypes, serviceType];
+                } else {
+                    selectedServiceTypes = selectedServiceTypes.filter((value) => value !== serviceType);
+                }
+                updateServiceFilterSummary();
+            });
+
+            const text = document.createElement('span');
+            text.textContent = serviceType;
+
+            optionLabel.appendChild(checkbox);
+            optionLabel.appendChild(text);
+            container.appendChild(optionLabel);
+        });
+
+        updateServiceFilterSummary();
+    }
+
+    function updateServiceFilterSummary() {
+        const summary = document.getElementById('filterServicesSummary');
+        if (!selectedServiceTypes.length) {
+            summary.textContent = 'Todos os tipos';
+            return;
+        }
+        if (selectedServiceTypes.length === 1) {
+            summary.textContent = selectedServiceTypes[0];
+            return;
+        }
+        summary.textContent = `${selectedServiceTypes.length} tipos selecionados`;
+    }
+
     let allPersonRows = [];
     let allRankRows   = [];
+
+    function getSelectedServiceTypes() {
+        return [...selectedServiceTypes];
+    }
 
     async function loadReport() {
         const dateFrom = document.getElementById('dateFrom').value;
         const dateTo   = document.getElementById('dateTo').value;
+        const selectedServices = getSelectedServiceTypes();
         if (!dateFrom || !dateTo) { alert('Selecione o período.'); return; }
         if (dateFrom > dateTo) { alert('Data inicial deve ser anterior à data final.'); return; }
 
@@ -336,8 +562,10 @@
         document.getElementById('cardRank').style.display = 'block';
 
         try {
+            const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+            if (selectedServices.length) params.set('service_types', selectedServices.join(','));
             const r = await fetch(
-                `${API_URL}/schedules/report?date_from=${dateFrom}&date_to=${dateTo}`,
+                `${API_URL}/schedules/report?${params.toString()}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             if (!r.ok) throw new Error((await r.json()).error);
@@ -346,8 +574,11 @@
             renderRank(data.by_rank);
             renderPerson(data.by_person);
             document.getElementById('btnExport').style.display = 'inline-block';
+            const serviceSummary = selectedServices.length
+                ? ` · ${selectedServices.length} tipo${selectedServices.length !== 1 ? 's' : ''} de escala selecionado${selectedServices.length !== 1 ? 's' : ''}`
+                : '';
             document.getElementById('periodInfo').textContent =
-                `Exibindo: ${fmtDate(dateFrom)} a ${fmtDate(dateTo)} · ${data.by_person.length} militar${data.by_person.length !== 1 ? 'es' : ''}`;
+                `Exibindo: ${fmtDate(dateFrom)} a ${fmtDate(dateTo)} · ${countUniquePeople(data.by_person)} militar${countUniquePeople(data.by_person) !== 1 ? 'es' : ''}${serviceSummary}`;
         } catch (err) {
             document.getElementById('rankGrid').innerHTML =
                 `<p class="empty-msg">❌ Erro: ${err.message}</p>`;
@@ -391,29 +622,43 @@
 
     function renderFilteredTable(rows) {
         const tbody = document.getElementById('personBody');
-        if (!rows.length) {
-            tbody.innerHTML = '<tr><td colspan="4" class="empty-msg">Nenhum resultado.</td></tr>';
+        const groupedRows = groupRowsByPerson(rows);
+
+        if (!groupedRows.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">Nenhum resultado.</td></tr>';
             document.getElementById('tableCount').textContent = '';
             return;
         }
 
-        // sort by rank asc, then displayTotal desc
-        rows.sort((a, b) => {
+        // sort by rank asc, then name asc, then total desc
+        groupedRows.sort((a, b) => {
             const rc = (a.rank || '').localeCompare(b.rank || '');
-            return rc !== 0 ? rc : b.displayTotal - a.displayTotal;
+            if (rc !== 0) return rc;
+            const nc = (a.name || '').localeCompare(b.name || '');
+            return nc !== 0 ? nc : b.displayTotal - a.displayTotal;
         });
 
-        tbody.innerHTML = rows.map((r, i) => `
+        tbody.innerHTML = groupedRows.map((r, i) => `
             <tr>
                 <td style="color:#9ca3af;font-size:0.8rem">${i + 1}</td>
                 <td><span class="rank-badge">${r.rank || '—'}</span></td>
                 <td>${r.name || '—'}</td>
+                <td>
+                    <div class="service-badges">
+                        ${r.services.map((service) => `
+                            <span class="service-pill">
+                                <span>${service.name}</span>
+                                <span class="service-pill-count">${service.count}</span>
+                            </span>
+                        `).join('')}
+                    </div>
+                </td>
                 <td style="text-align:center"><span class="total-num">${r.displayTotal}</span></td>
             </tr>
         `).join('');
 
         document.getElementById('tableCount').textContent =
-            `${rows.length} militar${rows.length !== 1 ? 'es' : ''}`;
+            `${groupedRows.length} militar${groupedRows.length !== 1 ? 'es' : ''}`;
     }
 
     function filterTable() {
@@ -424,7 +669,7 @@
 
         const filtered = allPersonRows
             .filter(r => {
-                const nameOk  = !q    || (r.name || '').toLowerCase().includes(q);
+                const nameOk  = !q || (r.name || '').toLowerCase().includes(q) || (r.service || '').toLowerCase().includes(q);
                 const rankOk  = !rank || (r.rank || '') === rank;
                 const countOk = Number(r[totalKey]) > 0;
                 return nameOk && rankOk && countOk;
@@ -435,6 +680,39 @@
         renderFilteredRank();
     }
 
+    function groupRowsByPerson(rows) {
+        const grouped = new Map();
+
+        rows.forEach((row) => {
+            const key = `${row.rank || ''}::${row.name || ''}`;
+            if (!grouped.has(key)) {
+                grouped.set(key, {
+                    rank: row.rank,
+                    name: row.name,
+                    displayTotal: 0,
+                    services: []
+                });
+            }
+
+            const entry = grouped.get(key);
+            entry.displayTotal += Number(row.displayTotal || 0);
+            entry.services.push({
+                name: row.service || '—',
+                count: Number(row.displayTotal || 0)
+            });
+        });
+
+        grouped.forEach((entry) => {
+            entry.services.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+        });
+
+        return Array.from(grouped.values());
+    }
+
+    function countUniquePeople(rows) {
+        return new Set(rows.map((row) => `${row.rank || ''}::${row.name || ''}`)).size;
+    }
+
     function exportCSV() {
         const q       = document.getElementById('searchBox').value.toLowerCase().trim();
         const rank    = document.getElementById('filterRank').value;
@@ -442,7 +720,7 @@
         const totalKey = dayType === 'weekday' ? 'weekday_total' : dayType === 'weekend' ? 'weekend_total' : 'total';
 
         const rows = allPersonRows.filter(r => {
-            const nameOk  = !q    || (r.name || '').toLowerCase().includes(q);
+            const nameOk  = !q || (r.name || '').toLowerCase().includes(q) || (r.service || '').toLowerCase().includes(q);
             const rankOk  = !rank || (r.rank || '') === rank;
             const countOk = Number(r[totalKey]) > 0;
             return nameOk && rankOk && countOk;
@@ -451,22 +729,29 @@
 
         const dateFrom  = document.getElementById('dateFrom').value;
         const dateTo    = document.getElementById('dateTo').value;
+        const selectedServices = getSelectedServiceTypes();
         const rankSuffix = rank    ? `_${rank.replace(/[^a-zA-Z0-9]/g, '')}` : '';
         const daySuffix  = dayType === 'weekday' ? '_diasuteis' : dayType === 'weekend' ? '_fds' : '';
+        const serviceSuffix = selectedServices.length ? `_tipos-${selectedServices.length}` : '';
 
-        const lines = ['Graduacao,Nome,Qtd_Servicos'];
-        rows
+        const groupedRows = groupRowsByPerson(
+            rows.map((row) => ({ ...row, displayTotal: Number(row[totalKey]) }))
+        );
+
+        const lines = ['Graduacao,Nome,Servico,Qtd_Servicos'];
+        groupedRows
             .slice()
-            .sort((a, b) => (a.rank || '').localeCompare(b.rank || '') || Number(b[totalKey]) - Number(a[totalKey]))
+            .sort((a, b) => (a.rank || '').localeCompare(b.rank || '') || (a.name || '').localeCompare(b.name || '') || b.displayTotal - a.displayTotal)
             .forEach(r => {
-                lines.push(`"${r.rank || ''}","${r.name || ''}",${r[totalKey]}`);
+                const servicesText = r.services.map((service) => `${service.name} (${service.count})`).join(' | ');
+                lines.push(`"${r.rank || ''}","${r.name || ''}","${servicesText}",${r.displayTotal}`);
             });
 
         const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = `relatorio_escala_${dateFrom}_${dateTo}${rankSuffix}${daySuffix}.csv`;
+        a.download = `relatorio_escala_${dateFrom}_${dateTo}${rankSuffix}${daySuffix}${serviceSuffix}.csv`;
         a.click();
         URL.revokeObjectURL(url);
     }

@@ -40,7 +40,7 @@ async function register(req, res) {
     
     const user = await User.create({ 
       email, password, war_name: warName, full_name: fullName,
-      military_id, rank: normalizedRank, organization, company, phone, role 
+      military_id, rank: normalizedRank, organization, company, phone, role: 'user' 
     });
     
     return res.status(201).json({ 
@@ -76,6 +76,10 @@ async function login(req, res) {
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    if (user.is_active === false) {
+      return res.status(403).json({ error: 'User is inactive. Contact an administrator.' });
+    }
     
     const isValid = await User.verifyPassword(password, user.password_hash);
     if (!isValid) {
@@ -108,7 +112,8 @@ async function login(req, res) {
         organization: user.organization,
         company: user.company,
         phone: user.phone,
-        role: user.role
+        role: user.role,
+        is_active: user.is_active
       }
     });
   } catch (err) {

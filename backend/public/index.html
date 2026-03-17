@@ -10,7 +10,7 @@
         const user = localStorage.getItem('user');
         if (token && user) {
             const userData = JSON.parse(user);
-            window.location.replace(userData.role === 'admin' ? '/dashboard.html' : '/my-schedules.html');
+            window.location.replace(['admin', 'manager'].includes(userData.role) ? '/dashboard.html' : '/my-schedules.html');
         } else {
             window.location.replace('/login.html');
         }

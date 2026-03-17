@@ -353,6 +353,7 @@
             <div style="display:flex;gap:10px;align-items:center;">
                 <a href="/relatorios.html" class="btn btn-reports">📊 Relatórios</a>
                 <a href="/service-aliases.html" class="btn btn-reports">🧭 Tipos de Escala</a>
+                <a href="/users-admin.html" class="btn btn-reports" id="usersAdminLink" style="display: none;">👥 Usuários</a>
                 <button class="btn btn-logout" onclick="logout()">Sair</button>
             </div>
         </div>
@@ -413,6 +414,10 @@
         let currentUser = null;
         let selectedFile = null;
 
+        function isPrivilegedRole(role) {
+            return ['admin', 'manager'].includes(role);
+        }
+
         // Check authentication
         if (!token) {
             window.location.href = '/login.html';
@@ -456,10 +461,14 @@
                 const firstLetter = (currentUser.name || currentUser.email).charAt(0).toUpperCase();
                 document.getElementById('userAvatar').textContent = firstLetter;
 
-                // Show upload section for admins
-                if (currentUser.role === 'admin') {
+                // Show privileged sections for admins and managers.
+                if (isPrivilegedRole(currentUser.role)) {
                     document.getElementById('uploadSection').style.display = 'block';
                     document.getElementById('schedulesTitle').textContent = 'Todas as Escalas';
+                }
+
+                if (currentUser.role === 'admin') {
+                    document.getElementById('usersAdminLink').style.display = 'inline-flex';
                 }
             } catch (error) {
                 console.error('Error loading user:', error);
@@ -479,7 +488,7 @@
             const container = document.getElementById('schedulesContainer');
             
             try {
-                const endpoint = currentUser.role === 'admin' ? '/schedules' : '/schedules/my';
+                const endpoint = isPrivilegedRole(currentUser.role) ? '/schedules' : '/schedules/my';
                 const response = await fetch(`${API_URL}${endpoint}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -496,7 +505,7 @@
                             <p style="font-size: 48px; margin-bottom: 15px;">📋</p>
                             <p style="font-size: 16px; margin-bottom: 8px;">Nenhuma escala encontrada</p>
                             <p style="font-size: 14px;">
-                                ${currentUser.role === 'admin' ? 'Faça upload de um PDF para começar' : 'Você não possui escalas agendadas'}
+                                ${isPrivilegedRole(currentUser.role) ? 'Faça upload de um PDF para começar' : 'Você não possui escalas agendadas'}
                             </p>
                         </div>
                     `;
@@ -653,7 +662,7 @@
             const container = document.getElementById('statsContainer');
             
             try {
-                const endpoint = currentUser.role === 'admin' ? '/schedules' : '/schedules/my';
+                const endpoint = isPrivilegedRole(currentUser.role) ? '/schedules' : '/schedules/my';
                 const response = await fetch(`${API_URL}${endpoint}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`

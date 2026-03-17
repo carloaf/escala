@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const PRIVILEGED_ROLES = ['admin', 'manager'];
 
 function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -33,4 +34,11 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { authenticate, requireAdmin, JWT_SECRET };
+function requireManagerOrAdmin(req, res, next) {
+  if (!PRIVILEGED_ROLES.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Admin or manager access required' });
+  }
+  next();
+}
+
+module.exports = { authenticate, requireAdmin, requireManagerOrAdmin, JWT_SECRET, PRIVILEGED_ROLES };

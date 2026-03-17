@@ -248,7 +248,7 @@
                     const res = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
                     if (res.ok) {
                         const userData = JSON.parse(user);
-                        window.location.href = userData.role === 'admin' ? '/dashboard.html' : '/my-schedules.html';
+                        window.location.href = ['admin', 'manager'].includes(userData.role) ? '/dashboard.html' : '/my-schedules.html';
                     } else {
                         // Token expired/invalid — clear it and show login form
                         localStorage.removeItem('token');
@@ -295,7 +295,7 @@
                     
                     // Redirect based on role
                     setTimeout(() => {
-                        if (data.user.role === 'admin') {
+                        if (['admin', 'manager'].includes(data.user.role)) {
                             window.location.href = '/dashboard.html';
                         } else {
                             window.location.href = '/my-schedules.html';

@@ -258,7 +258,7 @@
             const me = await fetch(`${API_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
             if (!me.ok) throw new Error('unauthorized');
             const user = await me.json();
-            if (user.role !== 'admin') {
+            if (!['admin', 'manager'].includes(user.role)) {
                 window.location.href = '/dashboard.html';
                 return;
             }

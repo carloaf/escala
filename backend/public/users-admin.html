@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administração de Usuários</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #2f4858 0%, #33658a 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 1320px; margin: 0 auto; }
+        .header, .card {
+            background: rgba(255,255,255,0.97);
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        }
+
+        .header {
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header h1 { color: #1f2937; font-size: 1.5rem; margin-bottom: 4px; }
+        .header p { color: #6b7280; font-size: 0.92rem; }
+
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-back { background: #6b7280; color: white; }
+        .btn-back:hover { background: #4b5563; }
+        .btn-primary { background: #1d4ed8; color: white; }
+        .btn-primary:hover { background: #1e40af; }
+        .btn-secondary { background: #0f766e; color: white; }
+        .btn-secondary:hover { background: #115e59; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+
+        .card { padding: 22px; }
+        .card h2 {
+            color: #1f2937;
+            font-size: 1.12rem;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .search-box {
+            width: 320px;
+            max-width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 0.95rem;
+        }
+
+        .summary {
+            color: #6b7280;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: #1f2937;
+            color: white;
+            font-weight: 600;
+        }
+
+        tbody tr:nth-child(even) { background: #f8fafc; }
+        tbody tr:hover { background: #eff6ff; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-inactive { background: #fee2e2; color: #991b1b; }
+        .role-badge { background: #e0e7ff; color: #3730a3; }
+
+        .message {
+            display: none;
+            margin-bottom: 16px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 0.92rem;
+        }
+
+        .message.success { display: block; background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .message.error { display: block; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+
+        .modal.show { display: flex; }
+
+        .modal-card {
+            width: min(860px, 100%);
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.16);
+            padding: 24px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .modal-header h3 { color: #1f2937; }
+        .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .field { display: flex; flex-direction: column; gap: 6px; }
+        .field.full { grid-column: 1 / -1; }
+        .field label { font-size: 0.84rem; color: #374151; font-weight: 600; }
+        .field input, .field select {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 0.94rem;
+        }
+        .password-field {
+            display: flex;
+            gap: 8px;
+        }
+        .password-field input {
+            flex: 1;
+        }
+        .field input:focus, .field select:focus {
+            outline: none;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 860px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>Administração de Usuários</h1>
+            <p>Somente administradores podem editar dados cadastrais e ativar ou desativar contas.</p>
+        </div>
+        <a href="/dashboard.html" class="btn btn-back">← Voltar ao Dashboard</a>
+    </div>
+
+    <div class="card">
+        <h2>Usuários do Sistema</h2>
+        <div id="pageMessage" class="message"></div>
+        <div class="toolbar">
+            <input class="search-box" id="searchBox" placeholder="Buscar por nome, e-mail, OM ou graduação..." oninput="renderUsers()">
+            <span class="summary" id="summaryText">Carregando usuários...</span>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome de Guerra</th>
+                        <th>E-mail</th>
+                        <th>Graduação</th>
+                        <th>OM / Cia</th>
+                        <th>Status</th>
+                        <th>Perfil</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="usersBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="editModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Editar Usuário</h3>
+            <button class="close-btn" onclick="closeModal()">×</button>
+        </div>
+        <div class="form-grid">
+            <div class="field">
+                <label for="editWarName">Nome de Guerra</label>
+                <input id="editWarName">
+            </div>
+            <div class="field">
+                <label for="editFullName">Nome Completo</label>
+                <input id="editFullName">
+            </div>
+            <div class="field">
+                <label for="editEmail">E-mail</label>
+                <input id="editEmail" type="email">
+            </div>
+            <div class="field">
+                <label for="editMilitaryId">Identidade Militar</label>
+                <input id="editMilitaryId" maxlength="10">
+            </div>
+            <div class="field">
+                <label for="editRank">Graduação</label>
+                <select id="editRank"></select>
+            </div>
+            <div class="field">
+                <label for="editRole">Perfil</label>
+                <select id="editRole">
+                    <option value="user">Usuário</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Administrador</option>
+                </select>
+            </div>
+            <div class="field full">
+                <label for="editPassword">Senha</label>
+                <div class="password-field">
+                    <input id="editPassword" type="password" placeholder="Deixe em branco para manter a senha atual">
+                    <button class="btn btn-secondary" type="button" onclick="togglePasswordVisibility()" id="togglePasswordBtn">Mostrar</button>
+                </div>
+                <small style="color:#6b7280;">A senha atual nao pode ser consultada em texto puro. Informe uma nova senha para alterar.</small>
+            </div>
+            <div class="field">
+                <label for="editOrganization">OM</label>
+                <input id="editOrganization">
+            </div>
+            <div class="field">
+                <label for="editCompany">Companhia</label>
+                <input id="editCompany">
+            </div>
+            <div class="field">
+                <label for="editPhone">Telefone</label>
+                <input id="editPhone">
+            </div>
+            <div class="field">
+                <label for="editActive">Status</label>
+                <select id="editActive">
+                    <option value="true">Ativo</option>
+                    <option value="false">Inativo</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-back" type="button" onclick="closeModal()">Cancelar</button>
+            <button class="btn btn-primary" type="button" onclick="saveUser()">Salvar Alterações</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = '/api';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/login.html';
+
+    let users = [];
+    let ranks = [];
+    let currentUser = null;
+    let editingUserId = null;
+
+    (async () => {
+        try {
+            const meResponse = await fetch(`${API_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!meResponse.ok) throw new Error('unauthorized');
+            currentUser = await meResponse.json();
+            if (currentUser.role !== 'admin') {
+                window.location.href = '/dashboard.html';
+                return;
+            }
+
+            await Promise.all([loadUsers(), loadRanks()]);
+        } catch {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+    })();
+
+    async function loadUsers() {
+        const response = await fetch(`${API_URL}/users`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await response.json();
+        if (!response.ok) {
+            showMessage(data.error || 'Falha ao carregar usuários.', 'error');
+            return;
+        }
+        users = data;
+        renderUsers();
+    }
+
+    async function loadRanks() {
+        const response = await fetch(`${API_URL}/ranks`);
+        const data = await response.json();
+        if (!response.ok) return;
+        ranks = data;
+        const select = document.getElementById('editRank');
+        select.innerHTML = '<option value="">Selecione</option>' + data.map((rank) => `<option value="${escapeHtml(rank.abbreviation)}">${escapeHtml(rank.name)} (${escapeHtml(rank.abbreviation)})</option>`).join('');
+    }
+
+    function renderUsers() {
+        const query = document.getElementById('searchBox').value.toLowerCase().trim();
+        const filtered = users.filter((user) => {
+            const haystack = [user.war_name, user.full_name, user.email, user.rank, user.organization, user.company]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+            return !query || haystack.includes(query);
+        });
+
+        document.getElementById('summaryText').textContent = `${filtered.length} usuário(s) exibido(s) de ${users.length}`;
+
+        const tbody = document.getElementById('usersBody');
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:24px;">Nenhum usuário encontrado.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = filtered.map((user) => `
+            <tr>
+                <td>
+                    <strong>${escapeHtml(user.war_name || '—')}</strong><br>
+                    <small style="color:#6b7280;">${escapeHtml(user.full_name || '—')}</small>
+                </td>
+                <td>${escapeHtml(user.email || '—')}</td>
+                <td>${escapeHtml(user.rank || '—')}</td>
+                <td>${escapeHtml(user.organization || '—')} / ${escapeHtml(user.company || '—')}</td>
+                <td><span class="status-badge ${user.is_active ? 'status-active' : 'status-inactive'}">${user.is_active ? 'Ativo' : 'Inativo'}</span></td>
+                <td><span class="status-badge role-badge">${user.role}</span></td>
+                <td style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" onclick="openEditModal(${user.id})">Editar</button>
+                    <button class="btn ${user.is_active ? 'btn-danger' : 'btn-secondary'}" onclick="toggleStatus(${user.id}, ${user.is_active})">${user.is_active ? 'Desativar' : 'Ativar'}</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function openEditModal(userId) {
+        const user = users.find((entry) => entry.id === userId);
+        if (!user) return;
+
+        editingUserId = userId;
+        document.getElementById('editWarName').value = user.war_name || '';
+        document.getElementById('editFullName').value = user.full_name || '';
+        document.getElementById('editEmail').value = user.email || '';
+        document.getElementById('editMilitaryId').value = user.military_id || '';
+        document.getElementById('editRank').value = user.rank || '';
+        document.getElementById('editRole').value = user.role || 'user';
+        document.getElementById('editPassword').value = '';
+        document.getElementById('editPassword').type = 'password';
+        document.getElementById('togglePasswordBtn').textContent = 'Mostrar';
+        document.getElementById('editOrganization').value = user.organization || '';
+        document.getElementById('editCompany').value = user.company || '';
+        document.getElementById('editPhone').value = user.phone || '';
+        document.getElementById('editActive').value = String(user.is_active !== false);
+        document.getElementById('editModal').classList.add('show');
+    }
+
+    function closeModal() {
+        editingUserId = null;
+        document.getElementById('editPassword').value = '';
+        document.getElementById('editPassword').type = 'password';
+        document.getElementById('togglePasswordBtn').textContent = 'Mostrar';
+        document.getElementById('editModal').classList.remove('show');
+    }
+
+    function togglePasswordVisibility() {
+        const input = document.getElementById('editPassword');
+        const button = document.getElementById('togglePasswordBtn');
+        const showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        button.textContent = showing ? 'Mostrar' : 'Ocultar';
+    }
+
+    async function saveUser() {
+        if (!editingUserId) return;
+
+        const password = document.getElementById('editPassword').value;
+
+        const payload = {
+            war_name: document.getElementById('editWarName').value.trim(),
+            full_name: document.getElementById('editFullName').value.trim(),
+            email: document.getElementById('editEmail').value.trim(),
+            military_id: document.getElementById('editMilitaryId').value.trim(),
+            rank: document.getElementById('editRank').value,
+            role: document.getElementById('editRole').value,
+            organization: document.getElementById('editOrganization').value.trim(),
+            company: document.getElementById('editCompany').value.trim(),
+            phone: document.getElementById('editPhone').value.trim(),
+            is_active: document.getElementById('editActive').value === 'true'
+        };
+
+        if (password.trim()) {
+            payload.password = password;
+        }
+
+        const response = await fetch(`${API_URL}/users/${editingUserId}`, {
+            method: 'PUT',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            showMessage(data.error || 'Falha ao atualizar usuário.', 'error');
+            return;
+        }
+
+        showMessage('Usuário atualizado com sucesso.', 'success');
+        closeModal();
+        await loadUsers();
+    }
+
+    async function toggleStatus(userId, currentlyActive) {
+        const response = await fetch(`${API_URL}/users/${userId}/status`, {
+            method: 'PATCH',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ is_active: !currentlyActive })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            showMessage(data.error || 'Falha ao alterar status do usuário.', 'error');
+            return;
+        }
+
+        showMessage(`Usuário ${data.is_active ? 'ativado' : 'desativado'} com sucesso.`, 'success');
+        await loadUsers();
+    }
+
+    function showMessage(text, type) {
+        const node = document.getElementById('pageMessage');
+        node.className = `message ${type}`;
+        node.textContent = text;
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+</script>
+</body>
+</html>

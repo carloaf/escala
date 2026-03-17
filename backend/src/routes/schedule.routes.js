@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const { uploadPdf, listSchedules, getMySchedules, getChanges, getReport, getReportDateRange, getReportServiceTypes } = require('../controllers/schedule.controller');
-const { authenticate, requireAdmin } = require('../middleware/auth.middleware');
+const { authenticate, requireManagerOrAdmin } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -24,25 +24,25 @@ const upload = multer({ storage, fileFilter: (req, file, cb) => {
   cb(null, true);
 }});
 
-// POST /api/schedules/upload - Upload PDF (admin only)
-router.post('/upload', authenticate, requireAdmin, upload.single('pdf'), uploadPdf);
+// POST /api/schedules/upload - Upload PDF (admin and manager)
+router.post('/upload', authenticate, requireManagerOrAdmin, upload.single('pdf'), uploadPdf);
 
-// GET /api/schedules - List all schedules (admin only)
-router.get('/', authenticate, requireAdmin, listSchedules);
+// GET /api/schedules - List all schedules (admin and manager)
+router.get('/', authenticate, requireManagerOrAdmin, listSchedules);
 
 // GET /api/schedules/my - Get current user's schedules
 router.get('/my', authenticate, getMySchedules);
 
-// GET /api/schedules/changes - Get unnotified changes (admin only)
-router.get('/changes', authenticate, requireAdmin, getChanges);
+// GET /api/schedules/changes - Get unnotified changes (admin and manager)
+router.get('/changes', authenticate, requireManagerOrAdmin, getChanges);
 
-// GET /api/schedules/report - Relatório por militar e graduação (admin only)
-router.get('/report', authenticate, requireAdmin, getReport);
+// GET /api/schedules/report - Relatório por militar e graduação (admin and manager)
+router.get('/report', authenticate, requireManagerOrAdmin, getReport);
 
-// GET /api/schedules/report/range - Período disponível no BD (admin only)
-router.get('/report/range', authenticate, requireAdmin, getReportDateRange);
+// GET /api/schedules/report/range - Período disponível no BD (admin and manager)
+router.get('/report/range', authenticate, requireManagerOrAdmin, getReportDateRange);
 
-// GET /api/schedules/report/service-types - Tipos de escala disponíveis (admin only)
-router.get('/report/service-types', authenticate, requireAdmin, getReportServiceTypes);
+// GET /api/schedules/report/service-types - Tipos de escala disponíveis (admin and manager)
+router.get('/report/service-types', authenticate, requireManagerOrAdmin, getReportServiceTypes);
 
 module.exports = router;

@@ -145,3 +145,73 @@ Sua sugestão de usar Docker e Node.js é excelente e moderna. Com base nela, de
 8. Por vezes a escala pode haver alguma alteração e o sistema terá de ser capaz de reconhecer que houve mudança, quando um novo arquivo pdf for feito upload, e alertar o usuário que houve essa alteração em sua escala.
 
 Este PRD é um documento vivo e deve ser atualizado conforme o projeto evolui e novas informações se tornam disponíveis.[1][2][5] Ele fornece uma base sólida para iniciar o desenvolvimento e garantir que o produto final atenda às necessidades dos seus usuários.
+
+9. Histórico de Entregas Realizadas
+
+As atividades abaixo já foram implementadas no projeto e devem servir como histórico funcional do produto.
+
+9.1 Infraestrutura e Acesso
+
+- Ajuste do frontend para remover referências hardcoded a localhost e permitir acesso pela rede local.
+- Validação do acesso via Docker com publicação da aplicação em 0.0.0.0:3001.
+- Testes de conectividade local e por IP do host.
+
+9.2 Processamento de PDF e Persistência
+
+- Validação ponta a ponta do fluxo de login, upload de PDF, extração e persistência no PostgreSQL inteiramente pelo container.
+- Suporte ao processamento de arquivos de Previsão da Escala e Boletim Interno.
+- Regras de negócio para impedir que Previsão sobrescreva datas já consolidadas por Boletim Interno.
+
+9.3 Relatórios
+
+- Tela de relatórios administrativos com filtros de período, graduação, tipo de dia e tipos de escala.
+- Filtro múltiplo de tipos de escala com seletor expansível em formato dropdown.
+- Endpoint para listar tipos de escala disponíveis.
+- Ajuste da seção “Serviços por Militar” para exibir serviços condensados por militar com badges de quantidade.
+- Exportação do relatório individual em formato tabular.
+
+9.4 Normalização de Dados
+
+- Normalização de tipos de escala com regras estáticas e aliases dinâmicos.
+- Correção de nomes equivalentes de serviço no banco de dados por migrations dedicadas.
+- Normalização de nomes de militares sem acentos e em caixa alta para evitar duplicidade lógica.
+- Normalização de graduações para abreviações canônicas.
+- Aplicação da mesma normalização também ao cadastro de usuários.
+
+9.5 Administração de Aliases
+
+- Criação de tela administrativa para cadastrar e remover aliases de tipos de escala sem editar código.
+- Persistência dos aliases em tabela própria no banco.
+- Aplicação automática dos aliases tanto nas novas extrações quanto nos dados já existentes.
+
+9.6 Testes e Qualidade
+
+- Inclusão de testes automatizados em Node.js para normalização de serviços, nomes e graduações.
+- Validação prática dos relatórios e da API de aliases dentro do container do backend.
+
+9.7 Administração de Usuários
+
+- Criação de endpoints administrativos para listar usuários, consultar usuário específico, editar dados cadastrais e ativar/desativar contas.
+- Inclusão do campo `is_active` no modelo de usuários, na carga inicial e na migration `009_add_user_active.sql`.
+- Bloqueio de login para usuários inativos com retorno explícito para contato com administrador.
+- Criação da tela administrativa de usuários com busca, edição em modal e alternância de status.
+- Inclusão de redefinição de senha na edição de usuário, preservando o armazenamento seguro por hash e sem expor senha atual em texto puro.
+- Criação do perfil `manager`, com acesso operacional semelhante ao admin para upload, relatórios e aliases, mas sem acesso à área de administração de usuários.
+- Ajuste do banco para aceitar o novo perfil por meio da migration `010_allow_manager_role.sql`.
+- Validação prática no container do backend cobrindo edição, desativação, bloqueio de login, reativação e restrição de acesso para não administradores.
+
+9.8 Commit Consolidado Registrado
+
+- Commit realizado: 224a5b9
+- Mensagem: Add schedule normalization and admin alias management
+
+10. Regra de Atualização Contínua do PRD
+
+Daqui para frente, toda tarefa funcional, ajuste estrutural, migration, automação de teste ou commit relevante realizado no projeto deve ser registrado neste arquivo.
+
+Padrão de atualização a manter:
+
+- descrever a tarefa implementada
+- registrar impacto funcional
+- citar migration ou teste criado, quando houver
+- registrar commit associado, quando houver

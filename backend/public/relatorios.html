@@ -381,7 +381,7 @@
             <input type="text" class="search-box" id="searchBox" placeholder="Filtrar por nome..." oninput="filterTable()">
             <div style="display:flex;gap:10px;align-items:center;">
                 <span class="result-summary" id="tableCount"></span>
-                <button class="btn btn-export" onclick="exportCSV()" id="btnExport" style="display:none">⬇️ Exportar CSV</button>
+                <button class="btn btn-export" onclick="exportXLS()" id="btnExport" style="display:none">⬇️ Exportar XLS</button>
             </div>
         </div>
         <div class="table-wrapper">
@@ -414,7 +414,7 @@
             const r = await fetch(`${API_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
             if (!r.ok) { window.location.href = '/login.html'; return; }
             const u = await r.json();
-            if (u.role !== 'admin') { window.location.href = '/my-schedules.html'; return; }
+            if (!['admin', 'manager'].includes(u.role)) { window.location.href = '/my-schedules.html'; return; }
             await Promise.all([loadDateRange(), loadRanks(), loadServiceTypes()]);
         } catch { window.location.href = '/login.html'; }
     })();
@@ -713,7 +713,7 @@
         return new Set(rows.map((row) => `${row.rank || ''}::${row.name || ''}`)).size;
     }
 
-    function exportCSV() {
+    function exportXLS() {
         const q       = document.getElementById('searchBox').value.toLowerCase().trim();
         const rank    = document.getElementById('filterRank').value;
         const dayType = document.getElementById('filterDayType').value;
@@ -738,22 +738,60 @@
             rows.map((row) => ({ ...row, displayTotal: Number(row[totalKey]) }))
         );
 
-        const lines = ['Graduacao,Nome,Servico,Qtd_Servicos'];
-        groupedRows
+        const orderedRows = groupedRows
             .slice()
             .sort((a, b) => (a.rank || '').localeCompare(b.rank || '') || (a.name || '').localeCompare(b.name || '') || b.displayTotal - a.displayTotal)
-            .forEach(r => {
-                const servicesText = r.services.map((service) => `${service.name} (${service.count})`).join(' | ');
-                lines.push(`"${r.rank || ''}","${r.name || ''}","${servicesText}",${r.displayTotal}`);
-            });
 
-        const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const tableRows = orderedRows.map((r) => {
+            const servicesText = r.services.map((service) => `${escapeHtml(service.name)} (${service.count})`).join(' | ');
+            return `
+                <tr>
+                    <td>${escapeHtml(r.rank || '')}</td>
+                    <td>${escapeHtml(r.name || '')}</td>
+                    <td>${servicesText}</td>
+                    <td style="mso-number-format:'0';">${r.displayTotal}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const xlsContent = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="UTF-8">
+                    <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Serviços por Militar</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+                </head>
+                <body>
+                    <table border="1">
+                        <thead>
+                            <tr>
+                                <th>Graduação</th>
+                                <th>Nome</th>
+                                <th>Serviço</th>
+                                <th>Qtd. Serviços</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\uFEFF' + xlsContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = `relatorio_escala_${dateFrom}_${dateTo}${rankSuffix}${daySuffix}${serviceSuffix}.csv`;
+        a.download = `relatorio_escala_${dateFrom}_${dateTo}${rankSuffix}${daySuffix}${serviceSuffix}.xls`;
         a.click();
         URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     function fmtDate(d) {
